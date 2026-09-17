@@ -1,0 +1,11 @@
+# Local lecture sources and extracted content must stay out of Git.
+/materials/raw/
+/materials/derived/
+
+# Local Python environment and credentials.
+/.venv/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]

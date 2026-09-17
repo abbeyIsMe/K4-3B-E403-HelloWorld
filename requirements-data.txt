@@ -1,0 +1,5 @@
+av==18.1.0
+gdown==6.4.0
+Pillow==12.3.0
+pypdf[crypto]==6.19.0
+pypdfium2==5.13.0
