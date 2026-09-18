@@ -136,6 +136,7 @@ Loại: [] Tối ưu tính năng có sẵn  [ x] Tính năng mới
   | **Lượt 2 (Grounded Prompting v0.1)** | System Prompt HelloWorld: bắt buộc trích dẫn từ context; nếu similarity thấp thì kích hoạt template từ chối | **19 / 22 (86,4%)** | **100%** | **86,4%** | **Đạt Quality Bar!** Còn 3 case chưa tối ưu: 2 case gõ sai chính tả nặng khiến retrieval chưa bắt được, 1 case cite lệch 1 trang slide liền kề. |
   | **Lượt 3 (v1.0 Final — CP3)** | Hybrid BM25+Dense Vector+RRF + Intent-Aware Reranking + Strict Grounding + Cross-filter support | **12 / 12 (100,0%)** | **100%** | **100%** | **Đạt tuyệt đối.** Toàn bộ outcome (`ANSWER`, `CLARIFY`, `NOT_FOUND`) và citation đều chính xác. |
   | **Lượt 4 (V2 evidence gate)** | Candidate pool relevance-first + direct-evidence gate + strict citation IDs; offline, không gọi LLM | **40 / 40 (100,0%)** | **Chưa đo** | **Chưa đo** | Đạt ở retrieval/evidence layer; cần chạy end-to-end Gemini để kết luận factuality/citation của answer. |
+  | **Lượt 5 (CP3 E2E)** | 20 case đầu của V2 chạy bằng Gemini thật, cache kết quả, kiểm tra outcome + citation ID/evidence | **20 / 20 (100,0%)** | **Chưa claim tự động** | **15 / 15 ANSWER (100,0%)** | Đã có report tại `eval/eval_report_e2e.md`; còn video thao tác 30 giây và human claim review. |
 
 ## §8. Phân công & kế hoạch
 - Phân công có tên: spec / evidence / prompt / code / demo:

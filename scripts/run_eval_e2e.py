@@ -52,6 +52,10 @@ def main() -> int:
         key = case_key(case, args.model)
         if key in cache:
             result = cache[key]
+            # Reconcile expectations when a golden case is corrected without
+            # spending another generation call for the cached actual result.
+            result["expected_outcome"] = case["expected_outcome"]
+            result["passed_outcome"] = result.get("actual_outcome") == case["expected_outcome"]
             print(f"[{index}/{len(cases)}] CACHED {case['id']} -> {result['actual_outcome']}")
             results.append(result)
             continue
