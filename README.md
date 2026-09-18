@@ -5,12 +5,10 @@
 
 | Họ và tên | Mã học viên | Vai trò chính | Phần việc trong dự án |
 |---|---:|---|---|
-| Hồ Hoàng Phương Anh | Cần nhóm bổ sung | Evidence / research | Mining chatlog, khảo sát, số liệu pain point và impact |
+| Hồ Hoàng Phương Anh | 02460 | Evidence / research | Mining chatlog, khảo sát, số liệu pain point và impact, pdf cuối |
 | Đào Duy Hiếu | 02651 | Retrieval / prompt | BM25, dense retrieval, RRF, evidence gate và grounded prompt |
 | Trần Tuấn Tú | 02840 | Prototype / integration | Streamlit app, Gemini integration, chat UI, PDF/video inspector và demo |
-| Vũ Bá Anh | Cần nhóm bổ sung | Spec / evaluation | AI Spec, golden set, evaluation và phản biện |
-
-> Bổ sung ba mã học viên còn thiếu trước khi nộp.
+| Vũ Bá Anh | 02893 | Spec / evaluation | AI Spec, golden set, evaluation và phản biện |
 
 Trợ lý nghiên cứu bài giảng thông minh phong cách **Google NotebookLM** dành cho sinh viên VLearn. Hệ thống tra cứu tích lũy từ **Day01 đến bài học hiện tại** (hiện gồm 5 bài: 375 trang Slide PDF + 16 video ~74 phút), trả lời có căn cứ, trích dẫn minh bạch và tự động điều hướng đến đúng trang slide hoặc mốc thời gian video. Khi có Day06, dữ liệu Day06 được bổ sung vào cùng kho tri thức.
 
