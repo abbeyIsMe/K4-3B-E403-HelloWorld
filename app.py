@@ -65,6 +65,9 @@ if "inspector_mode" not in st.session_state:
 if "current_query" not in st.session_state:
     st.session_state.current_query = ""
 
+if "query_input" not in st.session_state:
+    st.session_state.query_input = ""
+
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
 
@@ -202,6 +205,7 @@ with col_studio:
     )
     if selected_pill and selected_pill != st.session_state.get("active_pill"):
         st.session_state["active_pill"] = selected_pill
+        st.session_state.query_input = sample_queries[selected_pill]
         st.session_state.current_query = sample_queries[selected_pill]
         st.session_state.auto_search = True
         st.rerun()
@@ -212,20 +216,22 @@ with col_studio:
         with c_in:
             typed_query = st.text_input(
                 "Nhập câu hỏi nghiên cứu:",
-                value=st.session_state.current_query,
                 placeholder="Đặt câu hỏi về bất kỳ bài học nào rồi nhấn Enter...",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                key="query_input",
             )
         with c_btn:
-            form_submitted = st.form_submit_button("Hỏi AI", type="primary", use_container_width=True)
+            form_submitted = st.form_submit_button("Hỏi AI", type="primary", width="stretch")
 
     should_search = form_submitted or st.session_state.auto_search
     st.session_state.auto_search = False
-    active_query = typed_query if form_submitted else st.session_state.current_query
+    active_query = typed_query
 
     # Execute Search
     if should_search and active_query and active_query.strip():
         st.session_state.current_query = active_query.strip()
+        if form_submitted:
+            st.session_state.active_pill = None
         if not allowed_sources:
             st.warning("Vui lòng chọn ít nhất một nguồn ở thanh cài đặt bên trái!")
         else:
@@ -332,7 +338,7 @@ with col_studio:
                         lesson_str = f" · {matched['lesson_name']}" if matched and matched.get("lesson_name") else ""
                         btn_text = f"📄 {location}{lesson_str}"
                         st.caption(c["source_name"])
-                        if st.button(btn_text, key=f"btn_p_{i}", use_container_width=True):
+                        if st.button(btn_text, key=f"btn_p_{i}", width="stretch"):
                             st.session_state.active_pdf = {
                                 "source_name": c["source_name"],
                                 "source_path": c.get("source_path") or (matched["source_path"] if matched else ""),
@@ -352,7 +358,7 @@ with col_studio:
                         lesson_str = f" · {matched['lesson_name']}" if matched and matched.get("lesson_name") else ""
                         btn_text = f"🎥 {v.get('timestamp_label', 'Video')}{lesson_str}"
                         st.caption(v["source_name"])
-                        if st.button(btn_text, key=f"btn_v_{j}", use_container_width=True):
+                        if st.button(btn_text, key=f"btn_v_{j}", width="stretch"):
                             st.session_state.active_video = {
                                 "source_name": v["source_name"],
                                 "source_path": v.get("source_path") or (matched["source_path"] if matched else ""),
@@ -380,13 +386,13 @@ with col_inspector:
         
         with col_t1:
             is_pdf = (curr_mode == "📄 Trang Slide PDF")
-            if st.button("📄 Trang Slide PDF", type="primary" if is_pdf else "secondary", use_container_width=True, key="tab_select_pdf"):
+            if st.button("📄 Trang Slide PDF", type="primary" if is_pdf else "secondary", width="stretch", key="tab_select_pdf"):
                 st.session_state["inspector_mode"] = "📄 Trang Slide PDF"
                 st.rerun()
                 
         with col_t2:
             is_vid = (curr_mode == "🎥 Video Bài Giảng")
-            if st.button("🎥 Video Bài Giảng", type="primary" if is_vid else "secondary", use_container_width=True, key="tab_select_vid"):
+            if st.button("🎥 Video Bài Giảng", type="primary" if is_vid else "secondary", width="stretch", key="tab_select_vid"):
                 st.session_state["inspector_mode"] = "🎥 Video Bài Giảng"
                 st.rerun()
                 
@@ -410,7 +416,7 @@ with col_inspector:
                 # Page Navigator
                 p_prev, p_info, p_next = st.columns([1, 2, 1])
                 with p_prev:
-                    if st.button("◀ Trước", key="p_prev_btn", use_container_width=True):
+                    if st.button("◀ Trước", key="p_prev_btn", width="stretch"):
                         if curr_p > 1:
                             pdf_data["page"] -= 1
                             pdf_data["timestamp_label"] = f"Trang {pdf_data['page']}"
@@ -419,7 +425,7 @@ with col_inspector:
                     pages_str = f"Trang {curr_p} / {num_pages}" if isinstance(num_pages, int) else f"Trang {curr_p}"
                     st.markdown(f"<div style='text-align:center; padding-top:6px; font-weight:600; font-size:0.95rem;'>{pages_str}</div>", unsafe_allow_html=True)
                 with p_next:
-                    if st.button("Sau ▶", key="p_next_btn", use_container_width=True):
+                    if st.button("Sau ▶", key="p_next_btn", width="stretch"):
                         if isinstance(num_pages, int) and curr_p < num_pages:
                             pdf_data["page"] += 1
                             pdf_data["timestamp_label"] = f"Trang {pdf_data['page']}"
@@ -427,7 +433,7 @@ with col_inspector:
                     
                 # Render Image
                 if img:
-                    st.image(img, use_container_width=True)
+                    st.image(img, width="stretch")
                 else:
                     st.error(f"Lỗi đọc PDF: {num_pages}")
 

@@ -7,7 +7,7 @@ from collections import Counter
 KNOWN_ENTITIES = (
     "token", "tokenizer", "react", "rag", "agent", "embedding", "hallucination",
     "context window", "system prompt", "tool calling", "function calling",
-    "double diamond", "poc canvas", "json schema", "python", "fine-tuning", "temperature", "top_p",
+    "double diamond", "poc canvas", "json schema", "pii", "python", "fine-tuning", "temperature", "top_p",
     "few-shot", "zero-shot"
 )
 

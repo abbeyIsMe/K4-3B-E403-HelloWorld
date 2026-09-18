@@ -105,10 +105,8 @@ CÂU HỎI CỦA HỌC VIÊN:
 """
         for m in models_to_try:
             try:
-                response = client.models.generate_content(
-                    model=m,
-                    contents=prompt
-                )
+                chat = client.chats.create(model=m)
+                response = chat.send_message(prompt)
                 raw_answer = response.text.strip()
                 
                 if "chưa tìm thấy thông tin" in raw_answer.lower() or "không tìm thấy thông tin" in raw_answer.lower():
@@ -132,7 +130,8 @@ CÂU HỎI CỦA HỌC VIÊN:
                 if not used_citations:
                     retry_prompt = prompt + "\n\nVALIDATION ERROR: Câu trả lời trước thiếu [cite:CHUNK_ID]. Hãy viết lại ngắn gọn và thêm ít nhất một citation ID hợp lệ."
                     try:
-                        retry_response = client.models.generate_content(model=m, contents=retry_prompt)
+                        retry_chat = client.chats.create(model=m)
+                        retry_response = retry_chat.send_message(retry_prompt)
                         raw_answer = (retry_response.text or "").strip()
                         cited_ids = [
                             cid.strip() for cid in re.findall(r"\[cite:([^\]]+)\]", raw_answer, flags=re.IGNORECASE)
