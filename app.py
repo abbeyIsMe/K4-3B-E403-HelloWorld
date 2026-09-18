@@ -118,6 +118,15 @@ if "dark_mode" not in st.session_state:
 # Clean theme-aware CSS
 st.markdown("""
 <style>
+    :root {
+        --vlearn-surface: #ffffff;
+        --vlearn-ink: #16202a;
+        --vlearn-muted: #5f6b76;
+        --vlearn-line: #d9e1e8;
+        --vlearn-blue: #1976b8;
+        --vlearn-red: #c62836;
+    }
+
     .block-container {
         padding-top: 2.5rem !important;
         padding-bottom: 2rem !important;
@@ -132,14 +141,14 @@ st.markdown("""
         box-sizing: border-box;
         display: flex;
         align-items: center;
-        gap: clamp(0.9rem, 2vw, 2rem);
+        gap: 1.25rem;
         width: calc(100% + 2rem);
         min-height: 4.4rem;
         margin: -1.2rem -1rem 1.8rem;
         padding: 0 1.25rem;
         border-bottom: 1px solid #34373b;
-        background: #151515;
-        color: #f7f7f7;
+        background: var(--vlearn-surface);
+        color: var(--vlearn-ink);
         overflow-x: auto;
         scrollbar-width: none;
     }
@@ -152,7 +161,7 @@ st.markdown("""
         flex: 0 0 auto;
         gap: 0.45rem;
         margin-right: clamp(0.2rem, 1.2vw, 1rem);
-        font-size: clamp(1.25rem, 1.8vw, 1.7rem);
+        font-size: 1.55rem;
         font-weight: 800;
         letter-spacing: 0.01em;
         white-space: nowrap;
@@ -163,7 +172,7 @@ st.markdown("""
         width: 2rem;
         height: 2rem;
         place-items: center;
-        color: #ffffff;
+        color: var(--vlearn-ink);
         font-size: 1.35rem;
         line-height: 1;
     }
@@ -176,15 +185,15 @@ st.markdown("""
         height: 4.4rem;
         padding: 0 0.15rem;
         border-bottom: 3px solid transparent;
-        color: #f5f5f5;
-        font-size: clamp(0.88rem, 1.35vw, 1.08rem);
+        color: var(--vlearn-ink);
+        font-size: 1rem;
         font-weight: 700;
         white-space: nowrap;
     }
 
-    .vlearn-nav-link.muted { color: #d7d7d7; }
-    .vlearn-nav-link.active { border-bottom-color: #df252d; color: #ffffff; }
-    .vlearn-nav-icon { color: #b9dcff; font-size: 1.05rem; }
+    .vlearn-nav-link.muted { color: var(--vlearn-muted); }
+    .vlearn-nav-link.active { border-bottom-color: var(--vlearn-red); color: var(--vlearn-ink); }
+    .vlearn-nav-icon { color: var(--vlearn-blue); font-size: 1.05rem; }
     .vlearn-nav-badge {
         padding: 0.15rem 0.45rem;
         border-radius: 999px;
@@ -215,6 +224,25 @@ st.markdown("""
         font-weight: 800;
     }
 
+    .vlearn-nav.dark {
+        background: #151515;
+        color: #f7f7f7;
+    }
+    .vlearn-nav.dark .vlearn-nav-link.muted { color: #d7d7d7; }
+    .vlearn-nav.dark .vlearn-nav-link.active { color: #ffffff; }
+    .vlearn-nav.dark .vlearn-nav-icon { color: #b9dcff; }
+    .vlearn-nav.dark .vlearn-locale.dim { color: #b6b6b6; }
+    .vlearn-nav.dark .vlearn-brand-mark { color: #ffffff; }
+
+    [data-testid="stChatMessage"] {
+        border: 1px solid var(--vlearn-line);
+        border-radius: 10px;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.7rem;
+    }
+
+    [data-testid="stChatMessage"] p { line-height: 1.55; }
+
     .source-row {
         display: flex;
         align-items: center;
@@ -244,13 +272,18 @@ st.markdown("""
 
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 8px !important;
+        border-color: var(--vlearn-line) !important;
+        background: var(--vlearn-surface);
     }
 
     div[data-testid="stButton"] button {
-        min-height: 2.35rem;
+        min-height: 2.75rem;
         white-space: normal;
         line-height: 1.2;
+        overflow-wrap: anywhere;
     }
+
+    div[data-testid="stChatInput"] textarea { min-height: 3rem; }
 
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
@@ -271,6 +304,7 @@ st.markdown("""
         .vlearn-brand { margin-right: 0; }
         .vlearn-brand-mark { width: 1.6rem; height: 1.6rem; }
         .vlearn-nav-tools { gap: 0.45rem; }
+        .vlearn-nav-link { font-size: 0.95rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -278,9 +312,13 @@ st.markdown("""
 if st.session_state.dark_mode:
     st.markdown("""
     <style>
-        .stApp { background: #0e1117; color: #f3f4f6; }
-        [data-testid="stChatMessage"] { background: rgba(255,255,255,0.04); border-radius: 12px; }
-        div[data-testid="stVerticalBlockBorderWrapper"] { background: rgba(255,255,255,0.03); }
+        :root {
+            --vlearn-surface: #171b22;
+            --vlearn-ink: #f3f4f6;
+            --vlearn-muted: #aab4bf;
+            --vlearn-line: #303944;
+        }
+        .stApp { background: #0e1117; color: var(--vlearn-ink); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -350,8 +388,9 @@ source_name = " + ".join(
 )
 
 # VLearn-style navigation shell. Notebook is the active destination.
-st.markdown("""
-<nav class="vlearn-nav" aria-label="VLearn navigation">
+nav_theme = "dark" if st.session_state.dark_mode else "light"
+st.markdown(f"""
+<nav class="vlearn-nav {nav_theme}" aria-label="VLearn navigation">
     <div class="vlearn-brand"><span class="vlearn-brand-mark">◆</span><span>VLEARN</span></div>
     <div class="vlearn-nav-link muted"><span>Trang chủ</span></div>
     <div class="vlearn-nav-link muted"><span>Khóa học</span></div>
