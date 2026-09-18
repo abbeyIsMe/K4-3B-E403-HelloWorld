@@ -1,11 +1,22 @@
-# VLearn NotebookLM (v1.0)
+# VLearn NotebookLM (v2.0)
 **Universal Grounded Lecture Research Assistant · Batch 04 · Class 3B · Room E403 · Team HelloWorld**
+
+## Thành viên nhóm & Phân công
+
+| Họ và tên | Mã học viên | Vai trò chính | Phần việc trong dự án |
+|---|---:|---|---|
+| Hồ Hoàng Phương Anh | Cần nhóm bổ sung | Evidence / research | Mining chatlog, khảo sát, số liệu pain point và impact |
+| Đào Duy Hiếu | Cần nhóm bổ sung | Retrieval / prompt | BM25, dense retrieval, RRF, evidence gate và grounded prompt |
+| Trần Tuấn Tú | 02840 | Prototype / integration | Streamlit app, Gemini integration, chat UI, PDF/video inspector và demo |
+| Vũ Bá Anh | Cần nhóm bổ sung | Spec / evaluation | AI Spec, golden set, evaluation và phản biện |
+
+> Bổ sung ba mã học viên còn thiếu trước khi nộp.
 
 Trợ lý nghiên cứu bài giảng thông minh phong cách **Google NotebookLM** dành cho sinh viên VLearn. Hệ thống tra cứu xuyên suốt toàn bộ **5 bài học (375 trang Slide PDF + 16 video bài giảng ~74 phút)**, trả lời chính xác, trích dẫn minh bạch và tự động điều hướng trực quan đến đúng trang slide và mốc thời gian video.
 
 ---
 
-## 🌟 Tính Năng Nổi Bật (v1.0)
+## 🌟 Tính Năng Nổi Bật (v2.0)
 
 1. **Tra Cứu Khái Niệm Xuyên Bài Học (Universal Search):**
    - Sinh viên không cần nhớ khái niệm thuộc bài học nào; hệ thống tự động quét 672 chunks kiến thức từ Day 1 đến Day 5 để tìm đúng nguồn.
@@ -17,25 +28,27 @@ Trợ lý nghiên cứu bài giảng thông minh phong cách **Google NotebookLM
    - Tự động nhảy sang tab Video hoặc Slide khi nhấn vào trích dẫn.
    - **Slide PDF:** Tự động mở đúng số trang vật lý, hỗ trợ lật trang trước/sau.
    - **Video Player:** Tự động tua đến đúng giây bắt đầu của trích dẫn (`start_time`), hỗ trợ HTTP 206 Range Streaming mượt mà.
-4. **100% Grounded & Lọc Trích Dẫn Trung Thực:**
-   - AI từ chối suy đoán ngoài tài liệu (*Strict Grounding*).
+4. **Grounded answer & Lọc Trích Dẫn Trung Thực:**
+   - Nội dung từ slide/video được tách khỏi kiến thức bổ sung ngoài bài giảng.
+   - Câu hỏi không có evidence phù hợp bị từ chối thay vì gán citation rác.
    - Chỉ tạo nút điều hướng cho những nguồn **thực sự được trích dẫn** trong câu trả lời.
 5. **Giao Diện NotebookLM Responsive:**
-   - Bố cục 2 cột cân đối 50/50, tự động co giãn 1 cột trên Mobile/Tablet.
+   - Bố cục Sources / Chat / Source Inspector theo workflow NotebookLM.
    - Hỗ trợ đầy đủ Light Mode và Dark Mode.
    - Gợi ý câu hỏi nhanh dạng Pills (`st.pills`) chống vỡ chữ.
 
 ---
 
-## 📊 Kết Quả Đánh Giá (Golden Evaluation)
+## 📊 Kết Quả Đánh Giá
 
-Hệ thống đã được kiểm thử toàn diện trên bộ 12 test cases chuẩn (`eval/golden_set_day01.json`):
+Hệ thống có bộ kiểm thử v2 cho retrieval/evidence và một lượt E2E Gemini riêng:
 
 | Tiêu chí | Kết quả | Trạng thái |
 |---|---|---|
-| **Độ chính xác Outcome (Answer / Clarify / Not Found)** | **12 / 12 (100.0%)** | ✅ Đạt tuyệt đối |
-| **Độ trung thực trích dẫn (Grounded Precision)** | **100%** | ✅ Không bịa nguồn |
-| **Hỗ trợ định dạng kép (PDF & Video)** | Đầy đủ cả 2 nguồn | ✅ Hoàn thành |
+| **Local retrieval regression** | **100 / 100 (100.0%)** | ✅ Không gọi Gemini |
+| **Evidence golden set v2** | **40 / 40 (100.0%)** | ✅ Direct/contextual gate |
+| **E2E Gemini outcome** | **20 / 20** | ✅ Citation contract |
+| **Claim-level factuality** | Chưa tự động đo | Cần human review |
 
 ---
 
@@ -80,7 +93,10 @@ Mở trình duyệt tại: **`http://localhost:8501`**.
 ## 📁 Cấu Trúc Dự Án
 
 ```text
-├── app.py                      # Giao diện chính Streamlit Studio
+├── app.py                      # Source chính của giao diện Streamlit
+├── codebase/
+│   ├── app.py                  # Entry point theo cấu trúc repo nộp bài
+│   └── README.md               # Cách chạy prototype từ codebase/
 ├── src/
 │   ├── ingest.py               # Trích xuất PDF và chuẩn hóa chunks
 │   ├── retrieval.py            # BM25 + Intent-Aware Contextual Reranking
@@ -92,12 +108,19 @@ Mở trình duyệt tại: **`http://localhost:8501`**.
 │   ├── inspect_materials.py    # Kiểm toán tính toàn vẹn của dữ liệu gốc
 │   └── transcribe_remaining_videos.py # Whisper ASR phiên âm 16 video
 ├── eval/
-│   ├── golden_set_day01.json   # 12 kịch bản kiểm thử chuẩn
+│   ├── golden_set_day01.json   # Golden set truy hồi
+│   ├── golden_set_v2.json      # Golden set evidence v2
 │   └── eval_report.md          # Báo cáo đánh giá chi tiết
+├── reflection/
+│   └── tran-tuan-tu-02840.md   # Reflection cá nhân
 ├── requirements.txt            # Danh mục thư viện ứng dụng
 ├── .env.example                # File mẫu cấu hình môi trường
 └── .gitignore                  # Loại trừ dữ liệu nặng và API keys nhạy cảm
 ```
+
+`validation/` chưa được tạo vì nhóm chưa thu thập được nhật ký dùng thử từ
+người ngoài một cách hợp lệ. Nhóm chấp nhận không lấy điểm bonus R6 thay vì tạo
+dữ liệu giả. `demo-slides.pdf` do các thành viên khác phụ trách.
 
 ---
 
