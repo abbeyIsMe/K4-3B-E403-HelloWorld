@@ -37,7 +37,7 @@ def run(golden_path: Path) -> int:
             citation_hint in f"{chunk.get('timestamp_label', '')} Trang {chunk.get('page', '')}"
             for chunk in chunks
         )
-        clean = all(chunk.get("evidence_support") == "direct" for chunk in chunks)
+        clean = all(chunk.get("evidence_support") in {"direct", "contextual"} for chunk in chunks)
         ok = outcome_ok and source_ok and citation_ok and clean
         passed += int(ok)
         icon = "PASS" if ok else "FAIL"

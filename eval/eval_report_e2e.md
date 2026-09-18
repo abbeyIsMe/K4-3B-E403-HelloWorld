@@ -21,12 +21,12 @@
 |---|---:|
 | Cases completed | **20 / 20** |
 | Outcome accuracy | **20 / 20 (100.0%)** |
-| ANSWER cases with a valid evidence citation | **15 / 15 (100.0%)** |
+| ANSWER cases with a valid evidence citation | **16 / 16 (100.0%)** |
 | Expected page/timestamp hints matched | **5 / 5 (100.0%)** |
-| NOT_FOUND cases without fabricated citations | **5 / 5 (100.0%)** |
-| New generation calls in the recorded run | **20** |
+| NOT_FOUND cases without fabricated citations | **4 / 4 (100.0%)** |
+| Incremental Gemini generations after contextual retrieval update | **3** |
 
-The cached result for V2-13 was generated before its expected outcome was corrected from `ANSWER` to `NOT_FOUND`; the actual Gemini outcome was already `NOT_FOUND`, and it is evaluated against the current golden set here.
+V2-08 and V2-10 were rerun after contextual retrieval was enabled. V2-19 remains `NOT_FOUND` because the PDF-only filter contains token-budget mentions but no sufficient definition; the video source is required for the direct Token definition.
 
 ## Case table
 
@@ -39,9 +39,9 @@ The cached result for V2-13 was generated before its expected outcome was correc
 | V2-05 | ANSWER | ANSWER | PASS | PASS | `chk_0438` |
 | V2-06 | ANSWER | ANSWER | PASS | PASS | `chk_0197` |
 | V2-07 | ANSWER | ANSWER | PASS | PASS | `chk_0102`, `chk_0123` |
-| V2-08 | NOT_FOUND | NOT_FOUND | PASS | PASS | - |
+| V2-08 | ANSWER | ANSWER | PASS | PASS | `chk_0180`, `chk_0215`, `chk_0191` |
 | V2-09 | NOT_FOUND | NOT_FOUND | PASS | PASS | - |
-| V2-10 | NOT_FOUND | NOT_FOUND | PASS | PASS | - |
+| V2-10 | ANSWER | ANSWER | PASS | PASS | `chk_0363`, `chk_0172`, `chk_0334` |
 | V2-11 | ANSWER | ANSWER | PASS | PASS | `chk_0101` |
 | V2-12 | ANSWER | ANSWER | PASS | PASS | `chk_0044` |
 | V2-13 | NOT_FOUND | NOT_FOUND | PASS | PASS | - |

@@ -11,10 +11,11 @@ KNOWN_ENTITIES = (
     "few-shot", "zero-shot"
 )
 
-CONTEXT_MARKERS = {
-    "few-shot": ("ví dụ", "hợp khi", "pattern", "consistency", "dạy bằng"),
-    "pii": ("privacy", "dữ liệu nhạy cảm", "masking", "data pii", "access control"),
-}
+CONTEXT_RELATION_MARKERS = (
+    "ví dụ", "hợp", "cần", "tránh", "rủi ro", "vấn đề", "tự bịa",
+    "sai lệch", "privacy", "pattern", "bằng ví dụ", "gọi là", "có nghĩa",
+    "giúp",
+)
 
 DEFINITION_MARKERS = (
     "là", "được gọi là", "định nghĩa", "khái niệm", "có nghĩa là", "đơn vị",
@@ -221,6 +222,27 @@ def normalize_query(query: str) -> str:
     return re.sub(r"\bfew[\s-]+shot\b", "few-shot", query.lower().strip())
 
 
+def query_anchors(query: str) -> list[str]:
+    """Extract query terms without requiring a hard-coded vocabulary."""
+    normalized = normalize_query(query)
+    known = [entity for entity in KNOWN_ENTITIES if entity in normalized]
+    if known:
+        return known
+    generic = {"model", "bài", "học", "lecture", "product", "ai"}
+    return [term for term in _content_tokens(normalized) if term not in generic and len(term) > 2]
+
+
+def has_contextual_relation(anchor: str, text: str) -> bool:
+    """Find an explanatory relation in the same sentence/line as an anchor."""
+    pattern = re.escape(anchor).replace(r"\-", r"[\s-]+")
+    for segment in re.split(r"[\n.!?;]+", text):
+        if re.search(pattern, segment, flags=re.IGNORECASE) and any(
+            marker in segment for marker in CONTEXT_RELATION_MARKERS
+        ):
+            return True
+    return False
+
+
 def evidence_support(query: str, chunk: dict) -> dict:
     """Classify whether a candidate directly supports the user's whole question.
 
@@ -233,10 +255,11 @@ def evidence_support(query: str, chunk: dict) -> dict:
     signals = analyze_query(query)
     q_terms = _content_tokens(query)
     text_terms = _content_tokens(text)
-    entities = signals["entities"]
+    entities = query_anchors(query)
+    known_entities = [entity for entity in KNOWN_ENTITIES if entity in q]
     overlap = q_terms & text_terms
     lexical_ratio = len(overlap) / max(1, len(q_terms))
-    entity_hit = any(entity in text for entity in entities)
+    entity_hit = any(re.search(re.escape(entity).replace(r"\-", r"[\s-]+"), text) for entity in entities)
     definition_hit = entity_hit and any(
         re.search(
             rf"{re.escape(entity)}\s+(?:là|được gọi là|có nghĩa là|đóng vai trò|dùng để|là cách)",
@@ -251,10 +274,7 @@ def evidence_support(query: str, chunk: dict) -> dict:
             or re.search(rf"{re.escape(entity)}\s*=", text)
         for entity in entities
     )
-    contextual_hit = any(
-        entity_hit and any(marker in text for marker in CONTEXT_MARKERS.get(entity, ()))
-        for entity in entities
-    )
+    contextual_hit = any(has_contextual_relation(entity, text) for entity in entities)
     calculation_hit = entity_hit and (
         any(marker in text for marker in CALCULATION_MARKERS)
         or bool(re.search(r"\d+(?:[.,]\d+)?\s*(?:token|%|giây|phút|trang)", text))
@@ -267,9 +287,10 @@ def evidence_support(query: str, chunk: dict) -> dict:
 
     intent = signals["intent"]
     if intent == "definition":
-        if definition_hit or contextual_hit:
-            reason = "Có thực thể và câu mô tả định nghĩa." if definition_hit else "Có thực thể trong ngữ cảnh giải thích liên quan."
-            return {"support": "direct", "score": round(0.75 + min(0.2, lexical_ratio), 3), "reason": reason}
+        if definition_hit:
+            return {"support": "direct", "score": round(0.75 + min(0.2, lexical_ratio), 3), "reason": "Có thực thể và câu mô tả định nghĩa."}
+        if contextual_hit and len(entities) == 1:
+            return {"support": "contextual", "score": round(0.6 + min(0.25, lexical_ratio), 3), "reason": "Có thực thể trong ngữ cảnh giải thích liên quan."}
         return {"support": "partial", "score": round(0.25 + min(0.25, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng không có mô tả định nghĩa."}
 
     if intent == "calculation":
@@ -277,7 +298,8 @@ def evidence_support(query: str, chunk: dict) -> dict:
             return {"support": "direct", "score": round(0.65 + min(0.3, lexical_ratio), 3), "reason": "Có thuật ngữ cùng ràng buộc hoặc phép tính liên quan."}
         return {"support": "partial", "score": round(min(0.45, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng thiếu dữ kiện tính toán."}
 
-    if lexical_ratio >= 0.60 or (entity_hit and lexical_ratio >= 0.25):
+    known_entity_hit = any(entity in text for entity in known_entities)
+    if lexical_ratio >= 0.60 or (known_entity_hit and lexical_ratio >= 0.25):
         return {"support": "direct", "score": round(0.45 + min(0.5, lexical_ratio), 3), "reason": "Các thuật ngữ chính của câu hỏi cùng xuất hiện trong evidence."}
     return {"support": "partial", "score": round(lexical_ratio, 3), "reason": "Chỉ khớp một phần thuật ngữ."}
 
@@ -293,7 +315,11 @@ def select_evidence(query: str, candidates: list[dict], max_evidence: int = 5) -
         ranked.append(item)
 
     ranked.sort(key=lambda item: (-item["evidence_score"], item["_position"]))
-    selected = [item for item in ranked if item["evidence_support"] == "direct"][:max_evidence]
+    direct = [item for item in ranked if item["evidence_support"] == "direct"]
+    contextual = [item for item in ranked if item["evidence_support"] == "contextual"]
+    # Prefer precise definitions. Contextual evidence is a fallback for terms
+    # mentioned with an explanation but never formally defined.
+    selected = (direct or contextual)[:max_evidence]
     for item in selected:
         item.pop("_position", None)
     return selected
@@ -306,9 +332,10 @@ def is_query_ambiguous(query: str) -> bool:
     words = clean.split()
     
     if len(words) <= 2:
-        # Short named concepts such as "Token?" and "ReAct?" are valid
-        # definition questions; only unknown short phrases need clarification.
-        if any(entity in q for entity in KNOWN_ENTITIES):
+        # A single substantive term is a valid lookup even when it is not in
+        # our vocabulary. The evidence gate decides whether the corpus can
+        # explain it; only pronouns/generic filler remain ambiguous.
+        if any(len(term) >= 3 for term in _content_tokens(q)):
             return False
         return True
         

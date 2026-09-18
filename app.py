@@ -22,6 +22,26 @@ load_dotenv(repo_root / ".env")
 from src.retrieval import retrieve_evidence
 from src.grounded_answer import generate_grounded_answer, get_available_models
 
+
+def format_answer_for_display(answer: str, citations: list[dict]) -> str:
+    """Replace internal citation IDs with stable, user-facing reference numbers."""
+    citation_numbers = {
+        citation["chunk_id"]: index
+        for index, citation in enumerate(citations, start=1)
+    }
+
+    def replace_citation(match):
+        number = citation_numbers.get(match.group(1))
+        return f"[{number}]" if number else "[nguồn]"
+
+    return re.sub(
+        r"\[cite:([^\]]+)\]",
+        replace_citation,
+        answer,
+        flags=re.IGNORECASE,
+    )
+
+
 # Ensure video symlinks directory exists for streaming with clean .mp4 extension
 def ensure_video_symlink(video_rel_path: str) -> Path:
     raw_path = repo_root / "materials/raw" / video_rel_path
@@ -73,6 +93,12 @@ if "last_result" not in st.session_state:
 
 if "auto_search" not in st.session_state:
     st.session_state.auto_search = False
+
+if "pending_query" not in st.session_state:
+    st.session_state.pending_query = ""
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # Clean theme-aware CSS
 st.markdown("""
@@ -171,6 +197,7 @@ if previous_scope is not None and previous_scope != scope_signature:
     st.session_state.last_result = None
     st.session_state.active_pdf = None
     st.session_state.active_video = None
+    st.session_state.chat_history = []
 st.session_state.scope_signature = scope_signature
 
 scope_name = lesson_options[selected_lesson_key]
@@ -205,27 +232,18 @@ with col_studio:
     )
     if selected_pill and selected_pill != st.session_state.get("active_pill"):
         st.session_state["active_pill"] = selected_pill
-        st.session_state.query_input = sample_queries[selected_pill]
-        st.session_state.current_query = sample_queries[selected_pill]
+        st.session_state.pending_query = sample_queries[selected_pill]
         st.session_state.auto_search = True
         st.rerun()
 
-    # Search Bar with Enter key support
-    with st.form("query_form", clear_on_submit=False):
-        c_in, c_btn = st.columns([5, 1])
-        with c_in:
-            typed_query = st.text_input(
-                "Nhập câu hỏi nghiên cứu:",
-                placeholder="Đặt câu hỏi về bất kỳ bài học nào rồi nhấn Enter...",
-                label_visibility="collapsed",
-                key="query_input",
-            )
-        with c_btn:
-            form_submitted = st.form_submit_button("Hỏi AI", type="primary", width="stretch")
-
+    typed_query = st.chat_input(
+        "Hỏi về bài giảng đang chọn...",
+        key="chat_input",
+    )
+    form_submitted = typed_query is not None
     should_search = form_submitted or st.session_state.auto_search
     st.session_state.auto_search = False
-    active_query = typed_query
+    active_query = typed_query or st.session_state.pending_query
 
     # Execute Search
     if should_search and active_query and active_query.strip():
@@ -248,6 +266,11 @@ with col_studio:
                     model_name=selected_model
                 )
                 st.session_state.last_result = grounded_res
+                st.session_state.chat_history.append({
+                    "query": active_query.strip(),
+                    "result": grounded_res,
+                })
+                st.session_state.pending_query = ""
                 
                 # Auto-populate inspector targets
                 cits = grounded_res.get("citations", [])
@@ -288,7 +311,18 @@ with col_studio:
 
     # Display Answer Card
     res = st.session_state.last_result
+    for turn in st.session_state.chat_history[:-1]:
+        with st.chat_message("user"):
+            st.markdown(turn["query"])
+        with st.chat_message("assistant"):
+            st.markdown(format_answer_for_display(
+                turn["result"]["answer"],
+                turn["result"].get("citations", []),
+            ))
+
     if res:
+        with st.chat_message("user"):
+            st.markdown(st.session_state.chat_history[-1]["query"])
         outcome = res["outcome"]
         
         if outcome == "ANSWER":
@@ -299,22 +333,10 @@ with col_studio:
             st.markdown("🚫 **Không tìm thấy trong bài giảng:**")
             
         with st.container(border=True):
-            citation_numbers = {
-                citation["chunk_id"]: index
-                for index, citation in enumerate(res.get("citations", []), start=1)
-            }
-
-            def replace_citation(match):
-                number = citation_numbers.get(match.group(1))
-                return f"[{number}]" if number else "[nguồn]"
-
-            answer_text = re.sub(
-                r"\[cite:([^\]]+)\]",
-                replace_citation,
+            st.markdown(format_answer_for_display(
                 res["answer"],
-                flags=re.IGNORECASE,
-            )
-            st.markdown(answer_text)
+                res.get("citations", []),
+            ))
 
         citations = res.get("citations", [])
         evidence_chunks = res.get("evidence_chunks", [])

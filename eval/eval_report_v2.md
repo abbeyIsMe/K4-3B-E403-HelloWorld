@@ -14,11 +14,11 @@
 |---|---:|
 | Cases passed | **40 / 40** |
 | Evidence/outcome pass rate | **100.0%** |
-| Direct-evidence packet cleanliness | **100.0%** |
+| Evidence packet support cleanliness | **100.0%** |
 | Final LLM factuality | Not measured in this offline run |
 | Final LLM citation precision | Not measured in this offline run |
 
-The evaluator treats `FOUND` as `ANSWER` at the retrieval layer. Every returned chunk must be marked `direct`; weak keyword-only candidates are rejected. The explicit definition-gap cases for RAG, Embedding and the short Hallucination query correctly return `NOT_FOUND` because the prepared corpus does not contain a direct definition suitable for those exact questions.
+The evaluator treats `FOUND` as `ANSWER` at the retrieval layer. Every returned chunk must be marked `direct` or `contextual`; weak keyword-only candidates are rejected. Contextual support is used only when no direct definition is available and an explanatory relation appears near the queried term. Embedding and PoC Canvas remain explicit definition-gap/not-found cases.
 
 ## Reproduce
 

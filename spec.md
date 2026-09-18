@@ -125,7 +125,7 @@ Loại: [] Tối ưu tính năng có sẵn  [ x] Tính năng mới
   - Bộ test chạy tự động bằng `scripts/run_eval.py` với model `gemini-3.1-flash-lite`.
 - V2 evidence golden set (40 cases — file `eval/golden_set_v2.json`):
   - Bổ sung definition gap, source filter, prompt injection, paraphrase, ambiguity và keyword-noise cases xuyên Day 1–5.
-  - Chạy bằng `scripts/run_eval_v2.py` không cần gọi LLM: **40/40 (100%)** direct-evidence/outcome pass, xem `eval/eval_report_v2.md`.
+  - Chạy bằng `scripts/run_eval_v2.py` không cần gọi LLM: **40/40 (100%)** evidence-support/outcome pass, gồm direct và contextual evidence, xem `eval/eval_report_v2.md`.
   - Đây là kết quả retrieval/evidence layer; chưa được ghi là factuality/citation precision của output Gemini cuối.
 - Quality bar (chốt từ hạn chốt spec của khoá, giữ nguyên sau đó): *"Đạt khi ≥ 85% qua bộ, và Factuality đạt 100% (không có hallucination bịa nguồn), Citation Precision ≥ 80%"*
 - Kết quả các lượt chạy (bảng % — cập nhật đến trước CP6):
@@ -135,8 +135,8 @@ Loại: [] Tối ưu tính năng có sẵn  [ x] Tính năng mới
   | **Lượt 1 (Baseline)** | Dùng prompt thường của VLearn (không ép strict grounding) | **13 / 22 (59,1%)** | 68,2% | 50,0% | AI tự bịa kiến thức ngoài bài Day01; không hỏi lại ở case câu hỏi cụt; tỷ lệ thiếu citation cao tương đương data mining. |
   | **Lượt 2 (Grounded Prompting v0.1)** | System Prompt HelloWorld: bắt buộc trích dẫn từ context; nếu similarity thấp thì kích hoạt template từ chối | **19 / 22 (86,4%)** | **100%** | **86,4%** | **Đạt Quality Bar!** Còn 3 case chưa tối ưu: 2 case gõ sai chính tả nặng khiến retrieval chưa bắt được, 1 case cite lệch 1 trang slide liền kề. |
   | **Lượt 3 (v1.0 Final — CP3)** | Hybrid BM25+Dense Vector+RRF + Intent-Aware Reranking + Strict Grounding + Cross-filter support | **12 / 12 (100,0%)** | **100%** | **100%** | **Đạt tuyệt đối.** Toàn bộ outcome (`ANSWER`, `CLARIFY`, `NOT_FOUND`) và citation đều chính xác. |
-  | **Lượt 4 (V2 evidence gate)** | Candidate pool relevance-first + direct-evidence gate + strict citation IDs; offline, không gọi LLM | **40 / 40 (100,0%)** | **Chưa đo** | **Chưa đo** | Đạt ở retrieval/evidence layer; cần chạy end-to-end Gemini để kết luận factuality/citation của answer. |
-  | **Lượt 5 (CP3 E2E)** | 20 case đầu của V2 chạy bằng Gemini thật, cache kết quả, kiểm tra outcome + citation ID/evidence | **20 / 20 (100,0%)** | **Chưa claim tự động** | **15 / 15 ANSWER (100,0%)** | Đã có report tại `eval/eval_report_e2e.md`; còn video thao tác 30 giây và human claim review. |
+  | **Lượt 4 (V2 evidence gate)** | Candidate pool relevance-first + direct/contextual evidence gate + strict citation IDs; offline, không gọi LLM | **40 / 40 (100,0%)** | **Chưa đo** | **Chưa đo** | Đạt ở retrieval/evidence layer; contextual fallback chỉ dùng khi không có định nghĩa trực tiếp. |
+  | **Lượt 5 (CP3 E2E)** | 20 case đầu của V2 chạy bằng Gemini thật, cache kết quả, kiểm tra outcome + citation ID/evidence | **20 / 20 (100,0%)** | **Chưa claim tự động** | **16 / 16 ANSWER (100,0%)** | Đã có report tại `eval/eval_report_e2e.md`; còn human claim review theo từng citation. |
 
 ## §8. Phân công & kế hoạch
 - Phân công có tên: spec / evidence / prompt / code / demo:
@@ -164,4 +164,4 @@ Loại: [] Tối ưu tính năng có sẵn  [ x] Tính năng mới
 | **18/9 · 14:00** | — | Nâng phạm vi lên Universal Search Day 1–5 (672 chunks, 375 trang PDF, 16 video ~74 phút) | Nhóm nhận thấy học viên hỏi khái niệm xuyên bài (Token ↔ Embedding ↔ Attention) — giới hạn Day01 gây friction không cần thiết. |
 | **18/9 · 15:00** | — | Tích hợp Dense Vector (`gemini-embedding-001`, 3072 chiều) + Reciprocal Rank Fusion (RRF) | BM25 bỏ sót TC02/TC09 khi học viên dùng paraphrase ("bộ tách từ" thay vì "tokenizer") — dense vector semantic bắt đúng. |
 | **18/9 · 15:30** | CP5 | Intent-Aware Contextual Reranking + Dual-Source Inspector (PDF auto-page, Video auto-seek HTTP 206) | Intent boost +15.0 loại bỏ false positive keyword (query "Token là gì?" không còn trả về chunk tính toán số học). Inspector cho phép học viên đối chứng nguồn bằng mắt trong 1 click. |
-| **18/9 · V2** | Đo lại | Thêm 40-case offline evidence eval và direct-evidence gate; cập nhật UI answer-first | Tách chất lượng retrieval khỏi quota LLM; report tại `eval/eval_report_v2.md`. CP3 vẫn cần video thao tác và lượt đo end-to-end theo guide. |
+| **18/9 · V2** | Đo lại | Thêm 40-case offline evidence eval, contextual fallback và chat UI | Tách chất lượng retrieval khỏi quota LLM; report tại `eval/eval_report_v2.md`. E2E Gemini và video CP3 được ghi tại `eval/eval_report_e2e.md` và `demo/Demo_HelloWorld.mp4`. |

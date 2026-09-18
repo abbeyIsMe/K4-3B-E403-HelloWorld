@@ -45,7 +45,7 @@ class EvidenceGateTests(unittest.TestCase):
         )
         unrelated = chunk("unrelated", "Context window có giới hạn 8192 token.", source_type="pdf")
 
-        self.assertEqual(evidence_support("PII là gì?", pii_context)["support"], "direct")
+        self.assertEqual(evidence_support("PII là gì?", pii_context)["support"], "contextual")
         self.assertNotEqual(evidence_support("PII là gì?", unrelated)["support"], "direct")
 
     def test_few_shot_spacing_variant_matches_hyphenated_source(self):
