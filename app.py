@@ -13,7 +13,7 @@ st.set_page_config(
     page_title="VLearn NotebookLM — Trợ Lý Bài Giảng",
     page_icon="📓",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 repo_root = Path(__file__).resolve().parent
@@ -386,20 +386,6 @@ scope_name = lesson_options[selected_lesson_key]
 source_name = " + ".join(
     {"pdf": "slide", "video": "video"}[source] for source in allowed_sources
 )
-
-# VLearn-style navigation shell. Notebook is the active destination.
-nav_theme = "dark" if st.session_state.dark_mode else "light"
-st.markdown(f"""
-<nav class="vlearn-nav {nav_theme}" aria-label="VLearn navigation">
-    <div class="vlearn-brand"><span class="vlearn-brand-mark">◆</span><span>VLEARN</span></div>
-    <div class="vlearn-nav-link muted"><span>Trang chủ</span></div>
-    <div class="vlearn-nav-link muted"><span>Khóa học</span></div>
-    <div class="vlearn-nav-link active"><span>Notebook</span><span class="vlearn-nav-badge">Mới</span></div>
-    <div class="vlearn-nav-link muted"><span>Lab</span></div>
-    <div class="vlearn-nav-spacer"></div>
-    <div class="vlearn-nav-tools"><span class="vlearn-locale dim">EN</span><span class="vlearn-locale">VI</span><span>☼</span><span>♧</span><span class="vlearn-avatar">T</span></div>
-</nav>
-""", unsafe_allow_html=True)
 
 # Notebook controls
 header_title, header_theme, header_clear = st.columns([0.68, 0.20, 0.12], gap="small")
