@@ -1,11 +1,12 @@
 import re
 import math
 import json
+import unicodedata
 from pathlib import Path
 from collections import Counter
 
 KNOWN_ENTITIES = (
-    "token", "tokenizer", "react", "rag", "agent", "embedding", "hallucination",
+    "token", "tokenizer", "react", "rag", "agent", "embedding", "hallucination", "llm", "enum",
     "context window", "system prompt", "tool calling", "function calling",
     "double diamond", "poc canvas", "json schema", "pii", "python", "fine-tuning", "temperature", "top_p",
     "few-shot", "zero-shot"
@@ -14,7 +15,7 @@ KNOWN_ENTITIES = (
 CONTEXT_RELATION_MARKERS = (
     "ví dụ", "hợp", "cần", "tránh", "rủi ro", "vấn đề", "tự bịa",
     "sai lệch", "privacy", "pattern", "bằng ví dụ", "gọi là", "có nghĩa",
-    "giúp",
+    "giúp", "mô hình", "quy trình", "bước", "gồm",
 )
 
 DEFINITION_MARKERS = (
@@ -32,6 +33,9 @@ OUT_OF_SCOPE_PATTERNS = (
     "tấn công server",
     "viết code tấn công",
     "cách làm bánh pizza",
+    "hạn nộp hackathon",
+    "deadline hackathon",
+    "link classroom",
 )
 
 VIETNAMESE_STOPWORDS = {
@@ -56,10 +60,11 @@ class BM25Retriever:
     def tokenize(text, remove_stopwords=False):
         if not text:
             return []
-        clean_text = re.sub(r"[^\w\s\d]", " ", text.lower())
+        clean_text = re.sub(r"[^\w\s\d]", " ", _strip_diacritics(text.lower()))
         tokens = [t for t in clean_text.split() if len(t) > 1]
         if remove_stopwords:
-            tokens = [t for t in tokens if t not in VIETNAMESE_STOPWORDS]
+            folded_stopwords = {_strip_diacritics(word) for word in VIETNAMESE_STOPWORDS}
+            tokens = [t for t in tokens if t not in folded_stopwords]
         return tokens
 
     def index(self, chunks):
@@ -129,12 +134,13 @@ def score_context_intent(query: str, chk: dict) -> float:
     3. Calculation/Budget ('tính toán', 'ngân sách', 'bao nhiêu token', 'giới hạn')
     """
     q = normalize_query(query)
+    q_folded = _strip_diacritics(q)
     text = chk.get("text", "").lower()
     boost = 0.0
     
-    is_def = any(p in q for p in ["là gì", "khái niệm", "định nghĩa", "thế nào là", "ý nghĩa của", "bản chất"])
-    is_proc = any(p in q for p in ["quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao", "pattern"])
-    is_calc = any(p in q for p in ["tính", "ngân sách", "bao nhiêu", "giới hạn", "context window", "chi phí"])
+    is_def = any(p in q for p in ["là gì", "khái niệm", "định nghĩa", "thế nào là", "ý nghĩa của", "bản chất"]) or any(p in q_folded for p in ["la gi", "khai niem", "dinh nghia", "the nao la", "y nghia cua", "ban chat"])
+    is_proc = any(p in q for p in ["quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao", "pattern"]) or any(p in q_folded for p in ["quy trinh", "cac buoc", "lam sao", "cach", "hoat dong ra sao", "pattern"])
+    is_calc = any(p in q for p in ["tính", "ngân sách", "bao nhiêu", "giới hạn", "context window", "chi phí"]) or any(p in q_folded for p in ["tinh", "ngan sach", "bao nhieu", "gioi han", "context window", "chi phi"])
     
     # Common core AI terms across the 5 course days
     core_terms = [
@@ -197,12 +203,13 @@ def score_context_intent(query: str, chk: dict) -> float:
 def analyze_query(query: str) -> dict:
     """Extract only stable query signals used by the evidence gate."""
     q = normalize_query(query)
+    q_folded = _strip_diacritics(q)
     entities = [entity for entity in KNOWN_ENTITIES if entity in q]
-    if any(marker in q for marker in ("quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao")):
+    if any(marker in q for marker in ("quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao")) or any(marker in q_folded for marker in ("quy trinh", "cac buoc", "lam sao", "cach", "hoat dong ra sao")):
         intent = "procedure"
-    elif any(marker in q for marker in ("là gì", "khái niệm", "định nghĩa", "thế nào là", "ý nghĩa")):
+    elif any(marker in q for marker in ("là gì", "khái niệm", "định nghĩa", "thế nào là", "ý nghĩa")) or any(marker in q_folded for marker in ("la gi", "khai niem", "dinh nghia", "the nao la", "y nghia")):
         intent = "definition"
-    elif any(marker in q for marker in CALCULATION_MARKERS):
+    elif any(marker in q for marker in CALCULATION_MARKERS) or any(marker in q_folded for marker in ("tinh", "bao nhieu", "gioi han", "ngan sach", "chi phi", "co the", "con lai")):
         intent = "calculation"
     elif any(marker in q for marker in ("so sánh", "khác nhau", "giống nhau")):
         intent = "comparison"
@@ -220,6 +227,14 @@ def _content_tokens(text: str) -> set[str]:
 def normalize_query(query: str) -> str:
     """Normalize common spelling variants without changing the source text."""
     return re.sub(r"\bfew[\s-]+shot\b", "few-shot", query.lower().strip())
+
+
+def _strip_diacritics(text: str) -> str:
+    """Fold Vietnamese accents for intent matching, never for source text."""
+    return "".join(
+        char for char in unicodedata.normalize("NFD", text)
+        if unicodedata.category(char) != "Mn"
+    ).replace("đ", "d")
 
 
 def query_anchors(query: str) -> list[str]:
@@ -328,8 +343,11 @@ def select_evidence(query: str, candidates: list[dict], max_evidence: int = 5) -
 def is_query_ambiguous(query: str) -> bool:
     """Detect if question is too vague, generic, or lacks substantive context."""
     q = normalize_query(query)
+    q_folded = _strip_diacritics(q)
     clean = re.sub(r"[^\w\s]", "", q)
     words = clean.split()
+    pattern_query = re.sub(r"[?.!]+$", "", q).strip()
+    pattern_query_folded = _strip_diacritics(pattern_query)
     
     if len(words) <= 2:
         # A single substantive term is a valid lookup even when it is not in
@@ -340,15 +358,18 @@ def is_query_ambiguous(query: str) -> bool:
         return True
         
     ambiguous_patterns = [
-        r"^(cái này|chỗ này|đoạn này|nó) (dùng|là|làm|như thế nào|thế nào|sao)",
+        r"^(cái này|chỗ này|đoạn này|nó) (dùng|là|làm|hoạt động|như thế nào|thế nào|sao)",
         r"^(giải thích|làm rõ|hướng dẫn|chỉ em) (đi|với|giúp|nhé|ạ)?$",
         r"^(cái này|chỗ này|phần này) nghĩa là gì",
+        r"^(còn|vậy) (ưu điểm|nhược điểm|hạn chế|rủi ro) (thì )?(sao|gì|như thế nào)?$",
+        r"^(cho|đưa) (em )?(ví dụ|một ví dụ) (đi|với|nhé|ạ)?$",
         r"^làm sao để làm (được|ạ)?$",
         r"^(em|mình) không hiểu (gì cả|ạ)?$",
         r"^cho em hỏi (chút|với|này|ạ)?$"
     ]
-    for p in ambiguous_patterns:
-        if re.search(p, q):
+    folded_patterns = [_strip_diacritics(pattern) for pattern in ambiguous_patterns]
+    for pattern, folded_pattern in zip(ambiguous_patterns, folded_patterns):
+        if re.search(pattern, pattern_query) or re.search(folded_pattern, pattern_query_folded):
             return True
             
     return False

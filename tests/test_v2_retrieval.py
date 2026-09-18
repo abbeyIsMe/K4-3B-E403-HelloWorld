@@ -21,6 +21,15 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertFalse(is_query_ambiguous("ReAct?"))
         self.assertTrue(is_query_ambiguous("cái này dùng sao?"))
 
+    def test_unaccented_definition_keeps_source_filter_gate(self):
+        result = retrieve_evidence("Token la gi?", allowed_sources=["pdf"], use_dense=False)
+        self.assertEqual(result["status"], "NOT_FOUND")
+
+    def test_pronoun_and_followup_queries_need_context(self):
+        self.assertTrue(is_query_ambiguous("Nó hoạt động thế nào?"))
+        self.assertTrue(is_query_ambiguous("Còn nhược điểm thì sao?"))
+        self.assertTrue(is_query_ambiguous("Cho ví dụ đi"))
+
     def test_definition_rejects_token_budget_noise(self):
         definition = chunk("definition", "Token là đơn vị nhỏ mà mô hình ngôn ngữ dùng để xử lý văn bản.")
         budget = chunk("budget", "Context window có giới hạn 8192 token và ngân sách đầu ra là 2048 token.")
