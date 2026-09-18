@@ -11,6 +11,11 @@ KNOWN_ENTITIES = (
     "few-shot", "zero-shot"
 )
 
+CONTEXT_MARKERS = {
+    "few-shot": ("ví dụ", "hợp khi", "pattern", "consistency", "dạy bằng"),
+    "pii": ("privacy", "dữ liệu nhạy cảm", "masking", "data pii", "access control"),
+}
+
 DEFINITION_MARKERS = (
     "là", "được gọi là", "định nghĩa", "khái niệm", "có nghĩa là", "đơn vị",
     "đóng vai trò", "dùng để", "là cách"
@@ -122,7 +127,7 @@ def score_context_intent(query: str, chk: dict) -> float:
     2. Workflow/Procedure ('quy trình', 'các bước', 'cách thức', 'hoạt động ra sao')
     3. Calculation/Budget ('tính toán', 'ngân sách', 'bao nhiêu token', 'giới hạn')
     """
-    q = query.lower().strip()
+    q = normalize_query(query)
     text = chk.get("text", "").lower()
     boost = 0.0
     
@@ -190,7 +195,7 @@ def score_context_intent(query: str, chk: dict) -> float:
 
 def analyze_query(query: str) -> dict:
     """Extract only stable query signals used by the evidence gate."""
-    q = query.lower().strip()
+    q = normalize_query(query)
     entities = [entity for entity in KNOWN_ENTITIES if entity in q]
     if any(marker in q for marker in ("quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao")):
         intent = "procedure"
@@ -211,6 +216,11 @@ def _content_tokens(text: str) -> set[str]:
     return set(BM25Retriever.tokenize(text, remove_stopwords=True))
 
 
+def normalize_query(query: str) -> str:
+    """Normalize common spelling variants without changing the source text."""
+    return re.sub(r"\bfew[\s-]+shot\b", "few-shot", query.lower().strip())
+
+
 def evidence_support(query: str, chunk: dict) -> dict:
     """Classify whether a candidate directly supports the user's whole question.
 
@@ -218,7 +228,7 @@ def evidence_support(query: str, chunk: dict) -> dict:
     definition questions require a definition-shaped sentence, and calculation
     questions require calculation/constraint language in the same chunk.
     """
-    q = query.lower().strip()
+    q = normalize_query(query)
     text = chunk.get("text", "").lower()
     signals = analyze_query(query)
     q_terms = _content_tokens(query)
@@ -241,6 +251,10 @@ def evidence_support(query: str, chunk: dict) -> dict:
             or re.search(rf"{re.escape(entity)}\s*=", text)
         for entity in entities
     )
+    contextual_hit = any(
+        entity_hit and any(marker in text for marker in CONTEXT_MARKERS.get(entity, ()))
+        for entity in entities
+    )
     calculation_hit = entity_hit and (
         any(marker in text for marker in CALCULATION_MARKERS)
         or bool(re.search(r"\d+(?:[.,]\d+)?\s*(?:token|%|giây|phút|trang)", text))
@@ -253,8 +267,9 @@ def evidence_support(query: str, chunk: dict) -> dict:
 
     intent = signals["intent"]
     if intent == "definition":
-        if definition_hit:
-            return {"support": "direct", "score": round(0.75 + min(0.2, lexical_ratio), 3), "reason": "Có thực thể và câu mô tả định nghĩa."}
+        if definition_hit or contextual_hit:
+            reason = "Có thực thể và câu mô tả định nghĩa." if definition_hit else "Có thực thể trong ngữ cảnh giải thích liên quan."
+            return {"support": "direct", "score": round(0.75 + min(0.2, lexical_ratio), 3), "reason": reason}
         return {"support": "partial", "score": round(0.25 + min(0.25, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng không có mô tả định nghĩa."}
 
     if intent == "calculation":
@@ -286,7 +301,7 @@ def select_evidence(query: str, candidates: list[dict], max_evidence: int = 5) -
 
 def is_query_ambiguous(query: str) -> bool:
     """Detect if question is too vague, generic, or lacks substantive context."""
-    q = query.strip().lower()
+    q = normalize_query(query)
     clean = re.sub(r"[^\w\s]", "", q)
     words = clean.split()
     

@@ -94,7 +94,7 @@ QUY TẮC BẮT BUỘC:
 1. {citation_instruction}
 2. Chỉ sử dụng thông tin có trong các đoạn dẫn chứng. Tuyệt đối KHÔNG sử dụng kiến thức bên ngoài và KHÔNG được suy diễn/bịa đặt.
 3. Chỉ trích dẫn các đoạn dẫn chứng THỰC SỰ trả lời cho câu hỏi. KHÔNG trích dẫn các đoạn chỉ vô tình xuất hiện từ khóa nhưng nói về vấn đề khác. Không cần cố dùng cả slide và video.
-4. Nếu các đoạn dẫn chứng KHÔNG chứa câu trả lời trực tiếp hoặc thông tin không đủ, hãy trả lời chính xác: "Chưa tìm thấy thông tin này trong các nguồn bài giảng đã chọn."
+4. Nếu đoạn dẫn chứng không có định nghĩa đầy đủ nhưng có ngữ cảnh giải thích liên quan, hãy nói rõ đây là cách bài giảng đề cập đến thuật ngữ và chỉ trả lời phần có trong ngữ cảnh. Chỉ trả lời "Chưa tìm thấy thông tin này trong các nguồn bài giảng đã chọn." khi evidence hoàn toàn không đủ.
 5. Trình bày rõ ràng, súc tích bằng tiếng Việt.
 
 CÁC ĐOẠN DẪN CHỨNG:

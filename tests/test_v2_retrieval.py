@@ -1,6 +1,6 @@
 import unittest
 
-from src.retrieval import evidence_support, is_query_ambiguous, select_evidence
+from src.retrieval import evidence_support, is_query_ambiguous, retrieve_evidence, select_evidence
 from src.grounded_answer import generate_grounded_answer
 
 
@@ -36,6 +36,22 @@ class EvidenceGateTests(unittest.TestCase):
         selected = select_evidence("Token là gì?", candidates, max_evidence=3)
         self.assertEqual([item["chunk_id"] for item in selected], ["direct"])
         self.assertEqual(selected[0]["evidence_support"], "direct")
+
+    def test_contextual_term_is_supported_by_related_source_context(self):
+        pii_context = chunk(
+            "pii-context",
+            "Privacy: Có PII hoặc dữ liệu nhạy cảm không? Cần masking và access control.",
+            source_type="pdf",
+        )
+        unrelated = chunk("unrelated", "Context window có giới hạn 8192 token.", source_type="pdf")
+
+        self.assertEqual(evidence_support("PII là gì?", pii_context)["support"], "direct")
+        self.assertNotEqual(evidence_support("PII là gì?", unrelated)["support"], "direct")
+
+    def test_few_shot_spacing_variant_matches_hyphenated_source(self):
+        result = retrieve_evidence("Few shot là gì?", use_dense=False)
+        self.assertEqual(result["status"], "FOUND")
+        self.assertTrue(any(chunk["chunk_id"] == "chk_0186" for chunk in result["chunks"]))
 
     def test_offline_answer_cites_only_evidence_packet(self):
         direct = chunk("direct", "Token là đơn vị nhỏ dùng để biểu diễn văn bản.")
