@@ -324,7 +324,7 @@ def bm25_candidates(query: str, chunks: list[dict], top_k: int = 24, min_score: 
     ]
 
 
-def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3, min_score=0.0):
+def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3, min_score=0.0, use_dense=True):
     """
     Retrieve candidate chunks with dual-source balancing (PDF and Video).
     top_k: Number of top chunks per source type (e.g. 3 PDF + 3 Video).
@@ -384,7 +384,7 @@ def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3
     # implementation forced one quota for each source and sent weak chunks on.
     candidate_limit = max(12, top_k * 4)
     embed_file = repo_root / "materials/derived/embeddings/embeddings.npy"
-    if embed_file.exists():
+    if use_dense and embed_file.exists():
         try:
             from src.vector_store import hybrid_search
             res = hybrid_search(query, lesson_id=lesson_id, allowed_sources=allowed_sources, top_k=candidate_limit)

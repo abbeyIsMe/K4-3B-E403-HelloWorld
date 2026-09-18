@@ -77,7 +77,10 @@ def generate_grounded_answer(query: str, retrieval_result: dict, api_key: str = 
 
     # If API Key is available, call Gemini
     if key and key.strip():
-        models_to_try = [selected_model] + [m for m in WORKING_MODELS if m != selected_model]
+        if os.getenv("VLEARN_SINGLE_MODEL", "").lower() in {"1", "true", "yes"}:
+            models_to_try = [selected_model]
+        else:
+            models_to_try = [selected_model] + [m for m in WORKING_MODELS if m != selected_model]
         
         from google import genai
         client = genai.Client(api_key=key.strip())

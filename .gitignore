@@ -1,6 +1,7 @@
 # Local lecture sources and extracted content must stay out of Git.
 /materials/raw/
 /materials/derived/
+/eval/e2e_cache.json
 
 # Local Python environment and credentials.
 /.venv/
