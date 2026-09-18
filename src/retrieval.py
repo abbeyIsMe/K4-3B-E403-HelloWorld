@@ -20,6 +20,14 @@ CALCULATION_MARKERS = (
     "tính", "bao nhiêu", "giới hạn", "ngân sách", "chi phí", "có thể", "còn lại"
 )
 
+OUT_OF_SCOPE_PATTERNS = (
+    "bỏ qua toàn bộ hướng dẫn",
+    "trả lời ngoài bài giảng",
+    "tấn công server",
+    "viết code tấn công",
+    "cách làm bánh pizza",
+)
+
 VIETNAMESE_STOPWORDS = {
     "là", "gì", "thế", "nào", "như", "sao", "làm", "cách", "ở", "đâu", "khi",
     "và", "với", "cho", "của", "được", "có", "không", "những", "các", "một",
@@ -184,10 +192,10 @@ def analyze_query(query: str) -> dict:
     """Extract only stable query signals used by the evidence gate."""
     q = query.lower().strip()
     entities = [entity for entity in KNOWN_ENTITIES if entity in q]
-    if any(marker in q for marker in ("là gì", "khái niệm", "định nghĩa", "thế nào là", "ý nghĩa")):
-        intent = "definition"
-    elif any(marker in q for marker in ("quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao")):
+    if any(marker in q for marker in ("quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao")):
         intent = "procedure"
+    elif any(marker in q for marker in ("là gì", "khái niệm", "định nghĩa", "thế nào là", "ý nghĩa")):
+        intent = "definition"
     elif any(marker in q for marker in CALCULATION_MARKERS):
         intent = "calculation"
     elif any(marker in q for marker in ("so sánh", "khác nhau", "giống nhau")):
@@ -226,12 +234,15 @@ def evidence_support(query: str, chunk: dict) -> dict:
         )
             or re.search(rf"(?:định nghĩa|khái niệm|được gọi là)\s+(?:về\s+)?{re.escape(entity)}", text)
             or re.search(rf"đơn vị[^.\n]{{0,80}}được gọi là\s+{re.escape(entity)}", text)
+            or re.search(rf"{re.escape(entity)}\s*=", text)
         for entity in entities
     )
     calculation_hit = entity_hit and (
         any(marker in text for marker in CALCULATION_MARKERS)
         or bool(re.search(r"\d+(?:[.,]\d+)?\s*(?:token|%|giây|phút|trang)", text))
     )
+    if re.search(r"\bmodel\s+a\b", q) and not re.search(r"\bmodel\s+a\b", text):
+        calculation_hit = False
 
     if not overlap and not entity_hit:
         return {"support": "none", "score": 0.0, "reason": "Không có thực thể hoặc thuật ngữ của câu hỏi."}
@@ -297,6 +308,11 @@ def is_query_ambiguous(query: str) -> bool:
     return False
 
 
+def is_explicitly_out_of_scope(query: str) -> bool:
+    q = query.lower().strip()
+    return any(pattern in q for pattern in OUT_OF_SCOPE_PATTERNS)
+
+
 def bm25_candidates(query: str, chunks: list[dict], top_k: int = 24, min_score: float = 0.0) -> list[dict]:
     """Offline candidate retrieval used both directly and by vector fallback."""
     retriever = BM25Retriever()
@@ -315,6 +331,13 @@ def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3
     """
     if allowed_sources is None:
         allowed_sources = ["pdf", "video"]
+
+    if is_explicitly_out_of_scope(query):
+        return {
+            "status": "NOT_FOUND",
+            "reason": "Câu hỏi nằm ngoài phạm vi nội dung bài giảng.",
+            "chunks": []
+        }
         
     repo_root = Path(__file__).resolve().parent.parent
     chunks_file = repo_root / "materials/derived/chunks/all_chunks.jsonl"

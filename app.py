@@ -73,51 +73,64 @@ if "auto_search" not in st.session_state:
 # Clean theme-aware CSS
 st.markdown("""
 <style>
-    /* Ensure top content is never cut off by Streamlit header */
     .block-container {
-        padding-top: 4.5rem !important;
-        padding-bottom: 3rem !important;
-        max-width: 1380px !important;
+        padding-top: 2.5rem !important;
+        padding-bottom: 2rem !important;
+        max-width: 1500px !important;
     }
-    
-    /* Clean modern typography */
+
     .stApp {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* Form container styling */
     div[data-testid="stForm"] {
         border: 1px solid rgba(128, 128, 128, 0.25) !important;
-        border-radius: 12px !important;
-        padding: 8px 12px !important;
+        border-radius: 8px !important;
+        padding: 6px 8px !important;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 8px !important;
+    }
+
+    div[data-testid="stButton"] button {
+        min-height: 2.35rem;
+        white-space: normal;
+        line-height: 1.2;
+    }
+
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        margin-top: 0.5rem;
+    }
+
+    @media (max-width: 900px) {
+        .block-container {
+            padding: 1.5rem 1rem !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
 
 # Sidebar Configuration
 with st.sidebar:
-    st.header("⚙️ Cấu Hình Notebook")
-    
-    env_key = os.getenv("GEMINI_API_KEY", "")
-    api_key = st.text_input(
-        "Google Gemini API Key",
-        value=env_key,
-        type="password",
-        help="Lấy miễn phí tại https://aistudio.google.com"
-    )
-    
-    models_list = get_available_models(api_key)
-    current_default_model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
-    default_idx = models_list.index(current_default_model) if current_default_model in models_list else 0
-    
-    selected_model = st.selectbox(
-        "Mô hình AI",
-        models_list,
-        index=default_idx
-    )
-    
-    st.divider()
-    st.subheader("📁 Nguồn Tài Liệu (375 Slides & 16 Videos)")
+    st.header("⚙️ Notebook settings")
+
+    with st.expander("AI provider", expanded=False):
+        env_key = os.getenv("GEMINI_API_KEY", "")
+        api_key = st.text_input(
+            "Google Gemini API Key",
+            value=env_key,
+            type="password",
+            help="Key chỉ dùng trong phiên local này."
+        )
+
+        models_list = get_available_models(api_key)
+        current_default_model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+        default_idx = models_list.index(current_default_model) if current_default_model in models_list else 0
+        selected_model = st.selectbox("Mô hình", models_list, index=default_idx)
+
+    st.subheader("Phạm vi nguồn")
     
     lesson_options = {
         "all": "🔍 Toàn Bộ Khóa Học (Day 1 → Day 5)",
@@ -144,16 +157,14 @@ with st.sidebar:
     if use_video:
         allowed_sources.append("video")
         
-    st.divider()
-    st.caption("NotebookLM for VLearn — Batch 04 Hackathon Project")
+    st.caption("375 trang slide · 16 video · 672 evidence chunks")
 
 # Top Header
 st.title("📓 VLearn NotebookLM")
-st.caption("Trợ lý tra cứu bài giảng thông minh — Dẫn chứng trực tiếp từ 5 Slide PDF & 16 Video bài giảng")
-st.divider()
+st.caption("Tra cứu bài giảng bằng dẫn chứng trực tiếp từ slide và video")
 
-# Main Two-Column Studio Layout (NotebookLM Style)
-col_studio, col_inspector = st.columns([1, 1], gap="medium")
+# Main layout gives the answer more room than the inspector.
+col_studio, col_inspector = st.columns([1.2, 0.8], gap="large")
 
 # --- LEFT COLUMN: NOTEBOOK STUDIO (Chat & Citations) ---
 with col_studio:
@@ -259,7 +270,7 @@ with col_studio:
         outcome = res["outcome"]
         
         if outcome == "ANSWER":
-            st.markdown("✨ **Câu trả lời có kiểm chứng (Grounded Answer):**")
+            st.markdown("✨ **Câu trả lời có kiểm chứng**")
         elif outcome == "CLARIFY":
             st.markdown("⚠️ **Cần làm rõ thêm ngữ cảnh:**")
         else:
@@ -270,9 +281,12 @@ with col_studio:
 
         citations = res.get("citations", [])
         evidence_chunks = res.get("evidence_chunks", [])
+
+        if evidence_chunks:
+            st.caption(f"{len(evidence_chunks)} đoạn evidence trực tiếp đã được giữ lại")
         
         if citations:
-            st.markdown("##### 🔗 Nguồn trích dẫn (Bấm để nhảy nguồn bên phải):")
+            st.markdown("##### Nguồn trích dẫn")
             
             pdf_cits = [c for c in citations if c["source_type"] == "pdf"]
             vid_cits = [c for c in citations if c["source_type"] == "video"]
@@ -283,8 +297,10 @@ with col_studio:
                 for i, c in enumerate(pdf_cits):
                     with p_cols[i % len(p_cols)]:
                         matched = next((chk for chk in evidence_chunks if chk["chunk_id"] == c["chunk_id"]), None)
+                        location = f"Trang {c.get('page')}" if c.get("page") else c.get("timestamp_label", "Slide")
                         lesson_str = f" · {matched['lesson_name']}" if matched and matched.get("lesson_name") else ""
-                        btn_text = f"📄 [{c['timestamp_label']}] {c['source_name']}{lesson_str}"
+                        btn_text = f"📄 {location}{lesson_str}"
+                        st.caption(c["source_name"])
                         if st.button(btn_text, key=f"btn_p_{i}", use_container_width=True):
                             st.session_state.active_pdf = {
                                 "source_name": c["source_name"],
@@ -303,7 +319,8 @@ with col_studio:
                     with v_cols[j % len(v_cols)]:
                         matched = next((chk for chk in evidence_chunks if chk["chunk_id"] == v["chunk_id"]), None)
                         lesson_str = f" · {matched['lesson_name']}" if matched and matched.get("lesson_name") else ""
-                        btn_text = f"🎥 [{v['timestamp_label']}] {v['source_name']}{lesson_str}"
+                        btn_text = f"🎥 {v.get('timestamp_label', 'Video')}{lesson_str}"
+                        st.caption(v["source_name"])
                         if st.button(btn_text, key=f"btn_v_{j}", use_container_width=True):
                             st.session_state.active_video = {
                                 "source_name": v["source_name"],
@@ -317,14 +334,15 @@ with col_studio:
 
             with st.expander("📝 Xem các đoạn văn bản gốc (Raw Chunks)"):
                 for chk in evidence_chunks:
-                    st.markdown(f"**[{chk.get('lesson_name', '')} | {chk['source_name']} | {chk['timestamp_label']}]**")
+                    support = chk.get("evidence_support", "direct")
+                    st.markdown(f"**{chk.get('lesson_name', '')} · {chk['source_name']} · {chk['timestamp_label']}** · `{support}`")
                     st.text(chk["text"])
 
 # --- RIGHT COLUMN: SOURCE INSPECTOR (PDF & Video Viewer) ---
 with col_inspector:
     with st.container(border=True):
-        st.markdown("### 🔍 Source Inspector")
-        st.caption("Trực quan hóa tài liệu và vị trí đoạn video đang được trích dẫn")
+        st.markdown("### Source Inspector")
+        st.caption("Chọn một citation để mở đúng slide hoặc timestamp video")
         
         col_t1, col_t2 = st.columns(2)
         curr_mode = st.session_state.get("inspector_mode", "📄 Trang Slide PDF")
@@ -347,7 +365,7 @@ with col_inspector:
         if curr_mode == "📄 Trang Slide PDF":
             pdf_data = st.session_state.active_pdf
             if not pdf_data:
-                st.info("Chưa có trích dẫn Slide PDF nào được chọn.")
+                st.info("Chưa có slide được chọn. Bấm một citation ở bên trái để mở nguồn.")
             else:
                 st.markdown(f"**Đang xem:** `{pdf_data['source_name']}`")
                 if pdf_data.get("lesson_name"):
@@ -386,7 +404,7 @@ with col_inspector:
         else:
             vid_data = st.session_state.active_video
             if not vid_data:
-                st.info("Chưa có trích dẫn Video nào được chọn.")
+                st.info("Chưa có video được chọn. Bấm một citation ở bên trái để mở nguồn.")
             else:
                 st.markdown(f"**Đang xem:** `{vid_data['source_name']}`")
                 if vid_data.get("lesson_name"):
