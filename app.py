@@ -13,7 +13,7 @@ st.set_page_config(
     page_title="VLearn NotebookLM — Trợ Lý Bài Giảng",
     page_icon="📓",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 repo_root = Path(__file__).resolve().parent
@@ -115,12 +115,29 @@ if "chat_history" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
+LESSON_OPTIONS = {
+    "day-01": "Day 01 · AI & LLM Foundation",
+    "day-02": "Day 02 · Define Problem For AI",
+    "day-03": "Day 03 · Design Pattern ReAct",
+    "day-04": "Day 04 · Prompt Engineering & Tool Calling",
+    "day-05": "Day 05 · AI Product Thinking & Requirement",
+}
+
 # Clean theme-aware CSS
 st.markdown("""
 <style>
+    :root {
+        --vlearn-surface: #ffffff;
+        --vlearn-ink: #16202a;
+        --vlearn-muted: #5f6b76;
+        --vlearn-line: #d9e1e8;
+        --vlearn-blue: #1976b8;
+        --vlearn-red: #c62836;
+    }
+
     .block-container {
         padding-top: 2.5rem !important;
-        padding-bottom: 2rem !important;
+        padding-bottom: 6.5rem !important;
         max-width: 1500px !important;
     }
 
@@ -132,14 +149,14 @@ st.markdown("""
         box-sizing: border-box;
         display: flex;
         align-items: center;
-        gap: clamp(0.9rem, 2vw, 2rem);
+        gap: 1.25rem;
         width: calc(100% + 2rem);
         min-height: 4.4rem;
         margin: -1.2rem -1rem 1.8rem;
         padding: 0 1.25rem;
         border-bottom: 1px solid #34373b;
-        background: #151515;
-        color: #f7f7f7;
+        background: var(--vlearn-surface);
+        color: var(--vlearn-ink);
         overflow-x: auto;
         scrollbar-width: none;
     }
@@ -152,7 +169,7 @@ st.markdown("""
         flex: 0 0 auto;
         gap: 0.45rem;
         margin-right: clamp(0.2rem, 1.2vw, 1rem);
-        font-size: clamp(1.25rem, 1.8vw, 1.7rem);
+        font-size: 1.55rem;
         font-weight: 800;
         letter-spacing: 0.01em;
         white-space: nowrap;
@@ -163,7 +180,7 @@ st.markdown("""
         width: 2rem;
         height: 2rem;
         place-items: center;
-        color: #ffffff;
+        color: var(--vlearn-ink);
         font-size: 1.35rem;
         line-height: 1;
     }
@@ -176,15 +193,15 @@ st.markdown("""
         height: 4.4rem;
         padding: 0 0.15rem;
         border-bottom: 3px solid transparent;
-        color: #f5f5f5;
-        font-size: clamp(0.88rem, 1.35vw, 1.08rem);
+        color: var(--vlearn-ink);
+        font-size: 1rem;
         font-weight: 700;
         white-space: nowrap;
     }
 
-    .vlearn-nav-link.muted { color: #d7d7d7; }
-    .vlearn-nav-link.active { border-bottom-color: #df252d; color: #ffffff; }
-    .vlearn-nav-icon { color: #b9dcff; font-size: 1.05rem; }
+    .vlearn-nav-link.muted { color: var(--vlearn-muted); }
+    .vlearn-nav-link.active { border-bottom-color: var(--vlearn-red); color: var(--vlearn-ink); }
+    .vlearn-nav-icon { color: var(--vlearn-blue); font-size: 1.05rem; }
     .vlearn-nav-badge {
         padding: 0.15rem 0.45rem;
         border-radius: 999px;
@@ -215,6 +232,25 @@ st.markdown("""
         font-weight: 800;
     }
 
+    .vlearn-nav.dark {
+        background: #151515;
+        color: #f7f7f7;
+    }
+    .vlearn-nav.dark .vlearn-nav-link.muted { color: #d7d7d7; }
+    .vlearn-nav.dark .vlearn-nav-link.active { color: #ffffff; }
+    .vlearn-nav.dark .vlearn-nav-icon { color: #b9dcff; }
+    .vlearn-nav.dark .vlearn-locale.dim { color: #b6b6b6; }
+    .vlearn-nav.dark .vlearn-brand-mark { color: #ffffff; }
+
+    [data-testid="stChatMessage"] {
+        border: 1px solid var(--vlearn-line);
+        border-radius: 10px;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.7rem;
+    }
+
+    [data-testid="stChatMessage"] p { line-height: 1.55; }
+
     .source-row {
         display: flex;
         align-items: center;
@@ -244,13 +280,33 @@ st.markdown("""
 
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 8px !important;
+        border-color: var(--vlearn-line) !important;
+        background: var(--vlearn-surface);
     }
 
     div[data-testid="stButton"] button {
-        min-height: 2.35rem;
+        min-height: 2.75rem;
         white-space: normal;
         line-height: 1.2;
+        overflow-wrap: anywhere;
     }
+
+    div[data-testid="stChatInput"] {
+        position: fixed !important;
+        left: 50%;
+        bottom: 1rem;
+        z-index: 1000;
+        width: min(47vw, 720px);
+        transform: translateX(-50%);
+        padding: 0.35rem;
+        border: 1px solid var(--vlearn-line);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--vlearn-surface) 94%, transparent);
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.16);
+        backdrop-filter: blur(12px);
+    }
+
+    div[data-testid="stChatInput"] textarea { min-height: 3rem; }
 
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
@@ -259,7 +315,7 @@ st.markdown("""
 
     @media (max-width: 900px) {
         .block-container {
-            padding: 1.5rem 1rem !important;
+            padding: 1.5rem 1rem 6.5rem !important;
         }
 
         .vlearn-nav {
@@ -271,6 +327,12 @@ st.markdown("""
         .vlearn-brand { margin-right: 0; }
         .vlearn-brand-mark { width: 1.6rem; height: 1.6rem; }
         .vlearn-nav-tools { gap: 0.45rem; }
+        .vlearn-nav-link { font-size: 0.95rem; }
+        div[data-testid="stChatInput"] {
+            left: 1rem;
+            width: calc(100% - 2rem);
+            transform: none;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -278,9 +340,13 @@ st.markdown("""
 if st.session_state.dark_mode:
     st.markdown("""
     <style>
-        .stApp { background: #0e1117; color: #f3f4f6; }
-        [data-testid="stChatMessage"] { background: rgba(255,255,255,0.04); border-radius: 12px; }
-        div[data-testid="stVerticalBlockBorderWrapper"] { background: rgba(255,255,255,0.03); }
+        :root {
+            --vlearn-surface: #171b22;
+            --vlearn-ink: #f3f4f6;
+            --vlearn-muted: #aab4bf;
+            --vlearn-line: #303944;
+        }
+        .stApp { background: #0e1117; color: var(--vlearn-ink); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -301,66 +367,6 @@ with st.sidebar:
         current_default_model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
         default_idx = models_list.index(current_default_model) if current_default_model in models_list else 0
         selected_model = st.selectbox("Mô hình", models_list, index=default_idx)
-
-    st.subheader("Phạm vi nguồn")
-    
-    lesson_options = {
-        "all": "🔍 Toàn Bộ Khóa Học (Day 1 → Day 5)",
-        "day-01": "Day 01: AI & LLM Foundation",
-        "day-02": "Day 02: Define Problem For AI",
-        "day-03": "Day 03: Design Pattern ReAct",
-        "day-04": "Day 04: Prompt Engineering & Tool Calling",
-        "day-05": "Day 05: AI Product Thinking & Requirement"
-    }
-    
-    selected_lesson_key = st.selectbox(
-        "Lọc bài học:",
-        options=list(lesson_options.keys()),
-        format_func=lambda k: lesson_options[k],
-        index=0
-    )
-    
-    use_pdf = st.checkbox("📄 Slide bài giảng (đến bài hiện tại)", value=True)
-    use_video = st.checkbox("🎥 Video bài giảng (đến bài hiện tại)", value=True)
-    
-    allowed_sources = []
-    if use_pdf:
-        allowed_sources.append("pdf")
-    if use_video:
-        allowed_sources.append("video")
-        
-    st.caption("Corpus Day01 → bài hiện tại · 375 trang slide · 16 video · 672 evidence chunks")
-
-# Do not leave an answer from a previous source scope on screen after the
-# user changes the lesson or source filters.
-scope_signature = (selected_lesson_key, tuple(allowed_sources))
-previous_scope = st.session_state.get("scope_signature")
-if previous_scope is not None and previous_scope != scope_signature:
-    st.session_state.last_result = None
-    st.session_state.active_pdf = None
-    st.session_state.active_video = None
-    st.session_state.chat_history = []
-    st.session_state.pending_query = ""
-    st.session_state.active_pill = None
-st.session_state.scope_signature = scope_signature
-
-scope_name = lesson_options[selected_lesson_key]
-source_name = " + ".join(
-    {"pdf": "slide", "video": "video"}[source] for source in allowed_sources
-)
-
-# VLearn-style navigation shell. Notebook is the active destination.
-st.markdown("""
-<nav class="vlearn-nav" aria-label="VLearn navigation">
-    <div class="vlearn-brand"><span class="vlearn-brand-mark">◆</span><span>VLEARN</span></div>
-    <div class="vlearn-nav-link muted"><span>Trang chủ</span></div>
-    <div class="vlearn-nav-link muted"><span>Khóa học</span></div>
-    <div class="vlearn-nav-link active"><span>Notebook</span><span class="vlearn-nav-badge">Mới</span></div>
-    <div class="vlearn-nav-link muted"><span>Lab</span></div>
-    <div class="vlearn-nav-spacer"></div>
-    <div class="vlearn-nav-tools"><span class="vlearn-locale dim">EN</span><span class="vlearn-locale">VI</span><span>☼</span><span>♧</span><span class="vlearn-avatar">T</span></div>
-</nav>
-""", unsafe_allow_html=True)
 
 # Notebook controls
 header_title, header_theme, header_clear = st.columns([0.68, 0.20, 0.12], gap="small")
@@ -391,32 +397,70 @@ col_sources, col_studio, col_inspector = st.columns([0.23, 0.49, 0.28], gap="med
 # --- LEFT COLUMN: SOURCES ---
 with col_sources:
     st.markdown("### Sources")
-    st.caption("Nguồn được dùng cho notebook này")
+    st.caption("Chọn nguồn được phép dùng làm citation")
 
     with st.container(border=True):
-        st.markdown("**📚 VLearn · Day01 → bài hiện tại**")
-        st.caption(scope_name)
+        st.markdown("**📚 VLearn · kho bài giảng**")
+        st.caption("Bật từng ngày để chọn slide/video làm nguồn trả lời")
         st.divider()
 
-        source_rows = [
-            ("📄", "Slide bài giảng", "đến bài hiện tại", "pdf"),
-            ("🎥", "Video bài giảng", "đến bài hiện tại", "video"),
+        for lesson_id, lesson_name in LESSON_OPTIONS.items():
+            with st.expander(lesson_name, expanded=lesson_id == "day-05"):
+                st.caption("Chỉ chọn nguồn; artifact không mở hoặc tải từ panel này.")
+                st.checkbox(
+                    "Slide PDF",
+                    value=True,
+                    key=f"source_pdf_{lesson_id}",
+                )
+                st.checkbox(
+                    "Video bài giảng",
+                    value=True,
+                    key=f"source_video_{lesson_id}",
+                )
+
+        st.divider()
+        st.caption("Citation chỉ lấy từ các Day và loại nguồn đang được tick.")
+
+    allowed_source_map = {
+        lesson_id: [
+            source_type
+            for source_type in ("pdf", "video")
+            if st.session_state.get(f"source_{source_type}_{lesson_id}", True)
         ]
-        for icon, label, count, source_type in source_rows:
-            active = source_type in allowed_sources
-            state = "Đang dùng" if active else "Đã tắt"
-            state_class = "source-active" if active else "source-muted"
-            st.markdown(
-                f"<div class='source-row {state_class}'>"
-                f"<span class='source-icon'>{icon}</span>"
-                f"<span><strong>{label}</strong><small>{count} · {state}</small></span>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
+        for lesson_id in LESSON_OPTIONS
+    }
+    selected_lesson_ids = [
+        lesson_id for lesson_id, sources in allowed_source_map.items() if sources
+    ]
+    allowed_sources = [
+        source_type
+        for source_type in ("pdf", "video")
+        if any(source_type in sources for sources in allowed_source_map.values())
+    ]
+    if selected_lesson_ids:
+        last_selected_day = selected_lesson_ids[-1]
+        scope_name = f"{LESSON_OPTIONS[selected_lesson_ids[0]]} → {LESSON_OPTIONS[last_selected_day]}"
+    else:
+        scope_name = "Chưa chọn bài học"
+    source_name = " + ".join({"pdf": "slide", "video": "video"}[source] for source in allowed_sources)
 
-        st.divider()
-        st.caption("Đổi bài học hoặc bật/tắt nguồn trong Notebook settings.")
-        st.metric("Evidence", "672 chunks")
+    st.metric("Đang chọn", f"{len(selected_lesson_ids)} Day")
+
+# Do not leave an answer from a previous source scope on screen after the
+# user changes the lesson or source filters.
+scope_signature = (
+    tuple(selected_lesson_ids),
+    tuple((lesson_id, tuple(sources)) for lesson_id, sources in allowed_source_map.items()),
+)
+previous_scope = st.session_state.get("scope_signature")
+if previous_scope is not None and previous_scope != scope_signature:
+    st.session_state.last_result = None
+    st.session_state.active_pdf = None
+    st.session_state.active_video = None
+    st.session_state.chat_history = []
+    st.session_state.pending_query = ""
+    st.session_state.active_pill = None
+st.session_state.scope_signature = scope_signature
 
 # --- CENTER COLUMN: NOTEBOOK CHAT ---
 with col_studio:
@@ -485,7 +529,9 @@ with col_studio:
                 else:
                     ret_res = retrieve_evidence(
                         query=search_query,
-                        lesson_id=selected_lesson_key,
+                        lesson_id="all",
+                        lesson_ids=selected_lesson_ids,
+                        allowed_source_map=allowed_source_map,
                         allowed_sources=allowed_sources
                     )
                 grounded_res = generate_grounded_answer(
