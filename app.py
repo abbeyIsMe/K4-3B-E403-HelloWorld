@@ -355,7 +355,10 @@ with col_studio:
         evidence_chunks = res.get("evidence_chunks", [])
 
         if evidence_chunks:
-            st.caption(f"{len(evidence_chunks)} đoạn evidence trực tiếp đã được giữ lại")
+            if res["outcome"] == "ANSWER":
+                st.caption(f"{len(evidence_chunks)} đoạn evidence được dùng để trả lời")
+            else:
+                st.caption(f"{len(evidence_chunks)} đoạn evidence liên quan được truy xuất")
         
         if citations:
             st.markdown("##### Nguồn trích dẫn")

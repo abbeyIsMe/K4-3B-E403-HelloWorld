@@ -109,14 +109,6 @@ CÂU HỎI CỦA HỌC VIÊN:
                 response = chat.send_message(prompt)
                 raw_answer = response.text.strip()
                 
-                if "chưa tìm thấy thông tin" in raw_answer.lower() or "không tìm thấy thông tin" in raw_answer.lower():
-                    return {
-                        "outcome": "NOT_FOUND",
-                        "answer": raw_answer,
-                        "citations": [],
-                        "evidence_chunks": chunks
-                    }
-
                 valid_ids = {chk["chunk_id"]: chk for chk in chunks}
                 cited_ids = []
                 for cid in re.findall(r"\[cite:([^\]]+)\]", raw_answer, flags=re.IGNORECASE):
@@ -124,6 +116,22 @@ CÂU HỎI CỦA HỌC VIÊN:
                     if cid in valid_ids and cid not in cited_ids:
                         cited_ids.append(cid)
                 used_citations = [_citation_from_chunk(valid_ids[cid]) for cid in cited_ids]
+
+                # Treat an un-cited refusal as NOT_FOUND. If the model gives
+                # a contextual answer with valid citations, keep that answer
+                # instead of discarding it just because it qualifies the lack
+                # of a textbook-style definition.
+                says_not_found = (
+                    "chưa tìm thấy thông tin" in raw_answer.lower()
+                    or "không tìm thấy thông tin" in raw_answer.lower()
+                )
+                if says_not_found and not used_citations:
+                    return {
+                        "outcome": "NOT_FOUND",
+                        "answer": raw_answer,
+                        "citations": [],
+                        "evidence_chunks": []
+                    }
 
                 # Never silently attach top chunks to an uncited answer. A
                 # bounded retry below gives the model one chance to repair it.
