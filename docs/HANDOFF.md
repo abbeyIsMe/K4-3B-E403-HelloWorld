@@ -2,8 +2,8 @@
 
 > **Target Audience:** Next LLM Session (GPT / Claude / Gemini) or Incoming Engineers  
 > **Repository Location:** `/home/tu/VinLab/K4-3B-E403-HelloWorld`  
-> **Current Version:** `v1.0.0` (Git Tag: `v1.0`, Commit `f7f56af`)  
-> **Evaluation Accuracy:** **100.0% (12/12 Golden Test Cases Passing)**  
+> **Current Version:** `v2.0` (progressive corpus: Day01 → bài hiện tại, hiện Day01–Day05)
+> **Evaluation:** **100/100 local retrieval regression; 20/20 E2E outcome/citation contract**
 > **App URL:** `http://localhost:8501`  
 
 ---
@@ -15,7 +15,7 @@ The project is an AI-powered **Grounded Lecture Research Assistant** modeled aft
 ### Core Problem Solved:
 Students often remember concepts (e.g., *"Double Diamond"*, *"Token"*, *"ReAct Pattern"*, *"PoC Canvas"*) but do not remember which of the 5 course days it was taught in, nor whether it was explained in the slide or in the video.
 The user can ask any question without specifying the day. The system:
-1. Performs cross-lecture hybrid retrieval across **375 PDF pages + 16 video lectures**.
+1. Performs progressive hybrid retrieval across the corpus from **Day01 to the current lesson** (currently 375 PDF pages + 16 video lectures).
 2. Answers truth-grounded without hallucinating or speculating outside the provided course materials.
 3. Cites exact sources: clicking a citation auto-switches the right-hand Inspector to either the physical **PDF Slide Page** or the **Video Player seeked to the exact second**.
 

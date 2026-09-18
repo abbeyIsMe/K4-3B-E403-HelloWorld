@@ -320,8 +320,8 @@ with st.sidebar:
         index=0
     )
     
-    use_pdf = st.checkbox("📄 Slide bài giảng (5 PDFs)", value=True)
-    use_video = st.checkbox("🎥 Video bài giảng (16 Videos)", value=True)
+    use_pdf = st.checkbox("📄 Slide bài giảng (đến bài hiện tại)", value=True)
+    use_video = st.checkbox("🎥 Video bài giảng (đến bài hiện tại)", value=True)
     
     allowed_sources = []
     if use_pdf:
@@ -329,7 +329,7 @@ with st.sidebar:
     if use_video:
         allowed_sources.append("video")
         
-    st.caption("375 trang slide · 16 video · 672 evidence chunks")
+    st.caption("Corpus Day01 → bài hiện tại · 375 trang slide · 16 video · 672 evidence chunks")
 
 # Do not leave an answer from a previous source scope on screen after the
 # user changes the lesson or source filters.
@@ -394,13 +394,13 @@ with col_sources:
     st.caption("Nguồn được dùng cho notebook này")
 
     with st.container(border=True):
-        st.markdown("**📚 VLearn · 5 bài học**")
+        st.markdown("**📚 VLearn · Day01 → bài hiện tại**")
         st.caption(scope_name)
         st.divider()
 
         source_rows = [
-            ("📄", "Slide bài giảng", "5 PDFs", "pdf"),
-            ("🎥", "Video bài giảng", "16 videos", "video"),
+            ("📄", "Slide bài giảng", "đến bài hiện tại", "pdf"),
+            ("🎥", "Video bài giảng", "đến bài hiện tại", "video"),
         ]
         for icon, label, count, source_type in source_rows:
             active = source_type in allowed_sources

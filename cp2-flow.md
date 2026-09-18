@@ -2,7 +2,7 @@
 
 ## Mục tiêu CP2
 
-Prototype đi theo ý tưởng **NotebookLM mini cho từng bài VLearn**: học viên hỏi một câu, hệ thống chỉ được trả lời từ nguồn của bài học đang chọn, gồm **slide** và **video/transcript bài giảng**.
+Prototype đi theo ý tưởng **NotebookLM mini cho VLearn**: học viên hỏi một câu, hệ thống chỉ được trả lời từ corpus tích lũy từ **Day01 đến bài học hiện tại**, gồm **slide** và **video/transcript bài giảng**. Khi có Day06, Day06 được bổ sung vào corpus.
 
 Ở CP2 chưa cần AI chạy thật. Artifact này dùng để TA thấy flow chính, phạm vi nguồn, và các nhánh xử lý trước khi nhóm build.
 
@@ -28,12 +28,12 @@ flowchart LR
 ## Màn hình cần mock
 
 1. **Source picker**
-   - Chọn bài học.
+   - Hiển thị phạm vi bài học: Day01 → bài hiện tại.
    - Bật/tắt nguồn: slide, video/transcript.
    - Hiển thị rõ: "Tutor chỉ trả lời từ các nguồn đang chọn".
 
 2. **Ask box**
-   - Học viên nhập một câu hỏi về bài đang học.
+   - Học viên nhập một câu hỏi về nội dung từ Day01 đến bài hiện tại.
    - Ví dụ: "Token là gì?", "Vì sao model lại dự đoán từ tiếp theo?", "Attention giúp gì?"
 
 3. **Evidence panel**

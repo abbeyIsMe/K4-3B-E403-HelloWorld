@@ -1,5 +1,5 @@
 # VLearn NotebookLM (v2.0)
-**Universal Grounded Lecture Research Assistant · Batch 04 · Class 3B · Room E403 · Team HelloWorld**
+**Progressive Grounded Lecture Research Assistant · Batch 04 · Class 3B · Room E403 · Team HelloWorld**
 
 ## Thành viên nhóm & Phân công
 
@@ -12,14 +12,14 @@
 
 > Bổ sung ba mã học viên còn thiếu trước khi nộp.
 
-Trợ lý nghiên cứu bài giảng thông minh phong cách **Google NotebookLM** dành cho sinh viên VLearn. Hệ thống tra cứu xuyên suốt toàn bộ **5 bài học (375 trang Slide PDF + 16 video bài giảng ~74 phút)**, trả lời chính xác, trích dẫn minh bạch và tự động điều hướng trực quan đến đúng trang slide và mốc thời gian video.
+Trợ lý nghiên cứu bài giảng thông minh phong cách **Google NotebookLM** dành cho sinh viên VLearn. Hệ thống tra cứu tích lũy từ **Day01 đến bài học hiện tại** (hiện gồm 5 bài: 375 trang Slide PDF + 16 video ~74 phút), trả lời có căn cứ, trích dẫn minh bạch và tự động điều hướng đến đúng trang slide hoặc mốc thời gian video. Khi có Day06, dữ liệu Day06 được bổ sung vào cùng kho tri thức.
 
 ---
 
 ## 🌟 Tính Năng Nổi Bật (v2.0)
 
-1. **Tra Cứu Khái Niệm Xuyên Bài Học (Universal Search):**
-   - Sinh viên không cần nhớ khái niệm thuộc bài học nào; hệ thống tự động quét 672 chunks kiến thức từ Day 1 đến Day 5 để tìm đúng nguồn.
+1. **Tra Cứu Tích Lũy Đến Bài Hiện Tại (Progressive Search):**
+   - Sinh viên không cần nhớ khái niệm thuộc bài nào; hệ thống tìm trong corpus từ Day01 đến bài hiện tại. Corpus hiện có 672 chunks từ Day01–Day05 và sẽ mở rộng khi có bài mới.
 2. **Kiến Trúc Hybrid Retrieval & Vector DB Chuẩn Xác:**
    - **Dense Semantic Vector:** 672 chunks được nhúng vector 3072 chiều (`gemini-embedding-001`), chuẩn hóa $L_2$ để tính nhanh Cosine Similarity.
    - **Intent-Aware Contextual Reranking:** Tự động phân tích ý định câu hỏi (Định nghĩa / Quy trình / Tính toán). Các câu hỏi khái niệm (ví dụ: *"Token là gì?"*) ưu tiên tuyệt đối các đoạn chứa vị ngữ định nghĩa cốt lõi, loại bỏ các đoạn chỉ nhắc từ khóa ngẫu nhiên trong bảng tính hay tham số code.
