@@ -198,6 +198,8 @@ if previous_scope is not None and previous_scope != scope_signature:
     st.session_state.active_pdf = None
     st.session_state.active_video = None
     st.session_state.chat_history = []
+    st.session_state.pending_query = ""
+    st.session_state.active_pill = None
 st.session_state.scope_signature = scope_signature
 
 scope_name = lesson_options[selected_lesson_key]
@@ -241,9 +243,19 @@ with col_studio:
         key="chat_input",
     )
     form_submitted = typed_query is not None
-    should_search = form_submitted or st.session_state.auto_search
+    auto_search = st.session_state.auto_search
     st.session_state.auto_search = False
-    active_query = typed_query or st.session_state.pending_query
+    # Only consume a query for the event that created it. A stale pending
+    # value must never be treated as a new chat submission on a rerun.
+    if form_submitted:
+        active_query = typed_query.strip()
+        st.session_state.pending_query = ""
+    elif auto_search:
+        active_query = st.session_state.pending_query.strip()
+        st.session_state.pending_query = ""
+    else:
+        active_query = ""
+    should_search = bool(active_query)
 
     # Execute Search
     if should_search and active_query and active_query.strip():
@@ -320,9 +332,10 @@ with col_studio:
                 turn["result"].get("citations", []),
             ))
 
-    if res:
+    if res and st.session_state.chat_history:
+        latest_turn = st.session_state.chat_history[-1]
         with st.chat_message("user"):
-            st.markdown(st.session_state.chat_history[-1]["query"])
+            st.markdown(latest_turn["query"])
         outcome = res["outcome"]
         
         if outcome == "ANSWER":
