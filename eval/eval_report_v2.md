@@ -3,7 +3,7 @@
 ## Scope
 
 - Golden set: `eval/golden_set_v2.json`
-- Cases: **40** across Day 1–5, source filters, ambiguity, out-of-scope requests, prompt injection, paraphrase and retrieval noise.
+- Cases: **40** across the current corpus (Day01–Day05), source filters, ambiguity, out-of-scope requests, prompt injection, paraphrase and retrieval noise.
 - Runner: `scripts/run_eval_v2.py`
 - Mode: offline retrieval/evidence evaluation; no LLM call is required.
 - Corpus: 672 prepared chunks and existing vector artifacts.
