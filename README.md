@@ -6,7 +6,7 @@
 | Họ và tên | Mã học viên | Vai trò chính | Phần việc trong dự án |
 |---|---:|---|---|
 | Hồ Hoàng Phương Anh | Cần nhóm bổ sung | Evidence / research | Mining chatlog, khảo sát, số liệu pain point và impact |
-| Đào Duy Hiếu | Cần nhóm bổ sung | Retrieval / prompt | BM25, dense retrieval, RRF, evidence gate và grounded prompt |
+| Đào Duy Hiếu | 02651 | Retrieval / prompt | BM25, dense retrieval, RRF, evidence gate và grounded prompt |
 | Trần Tuấn Tú | 02840 | Prototype / integration | Streamlit app, Gemini integration, chat UI, PDF/video inspector và demo |
 | Vũ Bá Anh | Cần nhóm bổ sung | Spec / evaluation | AI Spec, golden set, evaluation và phản biện |
 
