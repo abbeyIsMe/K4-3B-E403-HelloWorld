@@ -1,0 +1,23 @@
+services:
+  vlearn:
+    image: ${IMAGE_REPOSITORY:-ghcr.io/abbeyisme/k4-3b-e403-helloworld}:${IMAGE_TAG:-main}
+    container_name: vlearn-notebooklm
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8501:8501"
+    volumes:
+      - ${MATERIALS_PATH:-/home/tu/hosting/vlearn-notebooklm/materials}:/app/materials:ro
+    networks:
+      - homelab
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+
+networks:
+  homelab:
+    external: true

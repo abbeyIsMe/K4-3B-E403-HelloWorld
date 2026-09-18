@@ -1,0 +1,13 @@
+.git
+.github
+.venv
+__pycache__
+*.py[cod]
+.env
+materials/raw
+materials/derived
+docs
+eval
+demo
+*.mp4
+*.pdf

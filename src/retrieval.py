@@ -4,6 +4,22 @@ import json
 from pathlib import Path
 from collections import Counter
 
+KNOWN_ENTITIES = (
+    "token", "tokenizer", "react", "rag", "agent", "embedding", "hallucination",
+    "context window", "system prompt", "tool calling", "function calling",
+    "double diamond", "poc canvas", "fine-tuning", "temperature", "top_p",
+    "few-shot", "zero-shot"
+)
+
+DEFINITION_MARKERS = (
+    "là", "được gọi là", "định nghĩa", "khái niệm", "có nghĩa là", "đơn vị",
+    "đóng vai trò", "dùng để", "là cách"
+)
+
+CALCULATION_MARKERS = (
+    "tính", "bao nhiêu", "giới hạn", "ngân sách", "chi phí", "có thể", "còn lại"
+)
+
 VIETNAMESE_STOPWORDS = {
     "là", "gì", "thế", "nào", "như", "sao", "làm", "cách", "ở", "đâu", "khi",
     "và", "với", "cho", "của", "được", "có", "không", "những", "các", "một",
@@ -164,6 +180,95 @@ def score_context_intent(query: str, chk: dict) -> float:
     return boost
 
 
+def analyze_query(query: str) -> dict:
+    """Extract only stable query signals used by the evidence gate."""
+    q = query.lower().strip()
+    entities = [entity for entity in KNOWN_ENTITIES if entity in q]
+    if any(marker in q for marker in ("là gì", "khái niệm", "định nghĩa", "thế nào là", "ý nghĩa")):
+        intent = "definition"
+    elif any(marker in q for marker in ("quy trình", "các bước", "làm sao", "cách", "hoạt động ra sao")):
+        intent = "procedure"
+    elif any(marker in q for marker in CALCULATION_MARKERS):
+        intent = "calculation"
+    elif any(marker in q for marker in ("so sánh", "khác nhau", "giống nhau")):
+        intent = "comparison"
+    elif entities and len(BM25Retriever.tokenize(query, remove_stopwords=True)) <= 2:
+        intent = "definition"
+    else:
+        intent = "lookup"
+    return {"intent": intent, "entities": entities}
+
+
+def _content_tokens(text: str) -> set[str]:
+    return set(BM25Retriever.tokenize(text, remove_stopwords=True))
+
+
+def evidence_support(query: str, chunk: dict) -> dict:
+    """Classify whether a candidate directly supports the user's whole question.
+
+    This is intentionally conservative. A keyword hit is only partial evidence;
+    definition questions require a definition-shaped sentence, and calculation
+    questions require calculation/constraint language in the same chunk.
+    """
+    q = query.lower().strip()
+    text = chunk.get("text", "").lower()
+    signals = analyze_query(query)
+    q_terms = _content_tokens(query)
+    text_terms = _content_tokens(text)
+    entities = signals["entities"]
+    overlap = q_terms & text_terms
+    lexical_ratio = len(overlap) / max(1, len(q_terms))
+    entity_hit = any(entity in text for entity in entities)
+    definition_hit = entity_hit and any(
+        re.search(
+            rf"{re.escape(entity)}\s+(?:là|được gọi là|có nghĩa là|đóng vai trò|dùng để|là cách)",
+            text,
+        )
+            or re.search(rf"(?:định nghĩa|khái niệm|được gọi là)\s+(?:về\s+)?{re.escape(entity)}", text)
+            or re.search(rf"đơn vị[^.\n]{{0,80}}được gọi là\s+{re.escape(entity)}", text)
+        for entity in entities
+    )
+    calculation_hit = entity_hit and (
+        any(marker in text for marker in CALCULATION_MARKERS)
+        or bool(re.search(r"\d+(?:[.,]\d+)?\s*(?:token|%|giây|phút|trang)", text))
+    )
+
+    if not overlap and not entity_hit:
+        return {"support": "none", "score": 0.0, "reason": "Không có thực thể hoặc thuật ngữ của câu hỏi."}
+
+    intent = signals["intent"]
+    if intent == "definition":
+        if definition_hit:
+            return {"support": "direct", "score": round(0.75 + min(0.2, lexical_ratio), 3), "reason": "Có thực thể và câu mô tả định nghĩa."}
+        return {"support": "partial", "score": round(0.25 + min(0.25, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng không có mô tả định nghĩa."}
+
+    if intent == "calculation":
+        if calculation_hit and lexical_ratio >= 0.25:
+            return {"support": "direct", "score": round(0.65 + min(0.3, lexical_ratio), 3), "reason": "Có thuật ngữ cùng ràng buộc hoặc phép tính liên quan."}
+        return {"support": "partial", "score": round(min(0.45, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng thiếu dữ kiện tính toán."}
+
+    if lexical_ratio >= 0.45 or (entity_hit and lexical_ratio >= 0.25):
+        return {"support": "direct", "score": round(0.45 + min(0.5, lexical_ratio), 3), "reason": "Các thuật ngữ chính của câu hỏi cùng xuất hiện trong evidence."}
+    return {"support": "partial", "score": round(lexical_ratio, 3), "reason": "Chỉ khớp một phần thuật ngữ."}
+
+
+def select_evidence(query: str, candidates: list[dict], max_evidence: int = 5) -> list[dict]:
+    """Return only direct evidence, preserving relevance order and source diversity."""
+    ranked = []
+    for position, candidate in enumerate(candidates):
+        item = dict(candidate)
+        support = evidence_support(query, item)
+        item.update({f"evidence_{key}": value for key, value in support.items()})
+        item["_position"] = position
+        ranked.append(item)
+
+    ranked.sort(key=lambda item: (-item["evidence_score"], item["_position"]))
+    selected = [item for item in ranked if item["evidence_support"] == "direct"][:max_evidence]
+    for item in selected:
+        item.pop("_position", None)
+    return selected
+
+
 def is_query_ambiguous(query: str) -> bool:
     """Detect if question is too vague, generic, or lacks substantive context."""
     q = query.strip().lower()
@@ -171,6 +276,10 @@ def is_query_ambiguous(query: str) -> bool:
     words = clean.split()
     
     if len(words) <= 2:
+        # Short named concepts such as "Token?" and "ReAct?" are valid
+        # definition questions; only unknown short phrases need clarification.
+        if any(entity in q for entity in KNOWN_ENTITIES):
+            return False
         return True
         
     ambiguous_patterns = [
@@ -188,7 +297,18 @@ def is_query_ambiguous(query: str) -> bool:
     return False
 
 
-def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3, min_score=2.0):
+def bm25_candidates(query: str, chunks: list[dict], top_k: int = 24, min_score: float = 0.0) -> list[dict]:
+    """Offline candidate retrieval used both directly and by vector fallback."""
+    retriever = BM25Retriever()
+    retriever.index(chunks)
+    return [
+        {**chk, "relevance_score": round(score, 3)}
+        for chk, score in retriever.search(query, top_k=top_k)
+        if score >= min_score
+    ]
+
+
+def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3, min_score=0.0):
     """
     Retrieve candidate chunks with dual-source balancing (PDF and Video).
     top_k: Number of top chunks per source type (e.g. 3 PDF + 3 Video).
@@ -237,55 +357,34 @@ def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3
             "chunks": []
         }
 
-    # Use dense hybrid search if embeddings are built
+    # Use a larger candidate pool, then apply a direct-evidence gate. The old
+    # implementation forced one quota for each source and sent weak chunks on.
+    candidate_limit = max(12, top_k * 4)
     embed_file = repo_root / "materials/derived/embeddings/embeddings.npy"
     if embed_file.exists():
         try:
             from src.vector_store import hybrid_search
-            res = hybrid_search(query, lesson_id=lesson_id, allowed_sources=allowed_sources, top_k=top_k)
+            res = hybrid_search(query, lesson_id=lesson_id, allowed_sources=allowed_sources, top_k=candidate_limit)
             if res and res.get("status") == "FOUND":
-                return res
+                selected = select_evidence(query, res.get("chunks", []), max_evidence=top_k)
+                if selected:
+                    return {"status": "FOUND", "chunks": selected, "candidate_count": len(res.get("chunks", []))}
+                return {
+                    "status": "NOT_FOUND",
+                    "reason": "Có kết quả gần về từ khóa nhưng không đủ bằng chứng trực tiếp để trả lời câu hỏi.",
+                    "chunks": [],
+                    "candidate_count": len(res.get("chunks", []))
+                }
         except Exception as e:
             print(f"Hybrid search fallback: {e}")
 
-    results = []
-
-    # If both PDF and Video are allowed, search both independently to ensure dual-source coverage
-    if "pdf" in allowed_sources and "video" in allowed_sources and pdf_chunks and video_chunks:
-        ret_pdf = BM25Retriever()
-        ret_pdf.index(pdf_chunks)
-        ranked_pdf = ret_pdf.search(query, top_k=top_k)
-
-        ret_vid = BM25Retriever()
-        ret_vid.index(video_chunks)
-        ranked_vid = ret_vid.search(query, top_k=top_k)
-
-        for chk, score in ranked_pdf:
-            if score >= min_score:
-                item = dict(chk)
-                item["relevance_score"] = round(score, 3)
-                results.append(item)
-
-        for chk, score in ranked_vid:
-            if score >= min_score:
-                item = dict(chk)
-                item["relevance_score"] = round(score, 3)
-                results.append(item)
-    else:
-        all_eligible = pdf_chunks + video_chunks
-        retriever = BM25Retriever()
-        retriever.index(all_eligible)
-        ranked = retriever.search(query, top_k=top_k)
-        for chk, score in ranked:
-            if score >= min_score:
-                item = dict(chk)
-                item["relevance_score"] = round(score, 3)
-                results.append(item)
+    results = bm25_candidates(query, pdf_chunks + video_chunks, candidate_limit, min_score)
+    results = select_evidence(query, results, max_evidence=top_k)
 
     if not results:
         return {
             "status": "NOT_FOUND",
-            "reason": "Không tìm thấy nội dung liên quan trong các nguồn bài giảng đã chọn.",
+            "reason": "Không tìm thấy bằng chứng trực tiếp trong các nguồn bài giảng đã chọn.",
             "chunks": []
         }
 

@@ -116,8 +116,14 @@ def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
         embeddings, chunks = build_or_load_vector_index()
     except Exception as e:
         print(f"Vector index load failed: {e}. Falling back to BM25.")
-        from src.retrieval import retrieve_evidence
-        return retrieve_evidence(query, lesson_id=lesson_id, allowed_sources=allowed_sources, top_k=top_k)
+        from src.retrieval import bm25_candidates
+        eligible = [
+            chk for chk in chunks if (not lesson_id or lesson_id == "all" or chk.get("lesson_id") == lesson_id)
+            and chk.get("source_type") in allowed_sources
+        ] if "chunks" in locals() else []
+        if not eligible:
+            return {"status": "ERROR", "reason": "Không thể tải vector index.", "chunks": []}
+        return {"status": "FOUND", "chunks": bm25_candidates(query, eligible, top_k=top_k)}
 
     # 1. Semantic Vector Similarity
     try:
@@ -125,8 +131,14 @@ def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
         cos_sims = np.dot(embeddings, q_vec)
     except Exception as e:
         print(f"Query embedding failed: {e}. Falling back to BM25.")
-        from src.retrieval import retrieve_evidence
-        return retrieve_evidence(query, lesson_id=lesson_id, allowed_sources=allowed_sources, top_k=top_k)
+        from src.retrieval import bm25_candidates
+        eligible = [
+            chk for idx, chk in enumerate(chunks)
+            if idx < len(embeddings)
+            and (not lesson_id or lesson_id == "all" or chk.get("lesson_id") == lesson_id)
+            and chk.get("source_type") in allowed_sources
+        ]
+        return {"status": "FOUND", "chunks": bm25_candidates(query, eligible, top_k=top_k)}
 
     # Filter eligible indices
     pdf_indices = []
@@ -193,15 +205,9 @@ def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
 
     results = []
     
-    # Balanced Dual Source: Get top_k from PDF and top_k from Video
-    if "pdf" in allowed_sources and "video" in allowed_sources:
-        pdf_res = rank_source_hybrid(pdf_indices, top_k)
-        vid_res = rank_source_hybrid(vid_indices, top_k)
-        results = pdf_res + vid_res
-    elif "pdf" in allowed_sources:
-        results = rank_source_hybrid(pdf_indices, top_k * 2)
-    else:
-        results = rank_source_hybrid(vid_indices, top_k * 2)
+    # Candidate retrieval is relevance-first. Source diversity is applied by
+    # the evidence gate later, instead of forcing weak PDF/video results in.
+    results = rank_source_hybrid(pdf_indices + vid_indices, top_k)
 
     if not results:
         return {

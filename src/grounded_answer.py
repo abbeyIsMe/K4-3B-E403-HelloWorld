@@ -24,6 +24,17 @@ def get_available_models(api_key: str = None):
     return WORKING_MODELS
 
 
+def _citation_from_chunk(chunk: dict) -> dict:
+    return {
+        "chunk_id": chunk["chunk_id"],
+        "source_type": chunk["source_type"],
+        "source_name": chunk["source_name"],
+        "page": chunk.get("page"),
+        "timestamp_label": chunk.get("timestamp_label"),
+        "source_path": chunk["source_path"]
+    }
+
+
 def generate_grounded_answer(query: str, retrieval_result: dict, api_key: str = None, model_name: str = None):
     """
     Generate grounded answer from retrieved chunks.
@@ -48,23 +59,10 @@ def generate_grounded_answer(query: str, retrieval_result: dict, api_key: str = 
         }
 
     chunks = retrieval_result["chunks"]
-    citations = []
-    
-    for chk in chunks:
-        citations.append({
-            "chunk_id": chk["chunk_id"],
-            "source_type": chk["source_type"],
-            "source_name": chk["source_name"],
-            "page": chk.get("page"),
-            "timestamp_label": chk.get("timestamp_label"),
-            "source_path": chk["source_path"]
-        })
+    citations = [_citation_from_chunk(chk) for chk in chunks]
 
     # Prepare context for LLM
     context_blocks = []
-    has_pdf_chunk = any(c["source_type"] == "pdf" for c in chunks)
-    has_video_chunk = any(c["source_type"] == "video" for c in chunks)
-
     for i, chk in enumerate(chunks, 1):
         lbl = chk["timestamp_label"]
         src_type_label = "SLIDE PDF" if chk["source_type"] == "pdf" else "VIDEO BÀI GIẢNG"
@@ -84,9 +82,7 @@ def generate_grounded_answer(query: str, retrieval_result: dict, api_key: str = 
         from google import genai
         client = genai.Client(api_key=key.strip())
         
-        citation_instruction = "Ở cuối mỗi ý chính, BẮT BUỘC trích dẫn nguồn theo định dạng: `[Tên_File, Vị_Trí]`."
-        if has_pdf_chunk and has_video_chunk:
-            citation_instruction += "\nĐẶC BIỆT: Nếu cả Slide PDF VÀ Video bài giảng đều có nội dung trả lời, hãy trích dẫn cả hai nguồn (cả Slide lẫn Video) để người học vừa đọc slide vừa xem video."
+        citation_instruction = "Ở cuối mỗi ý chính, BẮT BUỘC trích dẫn đúng chunk ID theo định dạng `[cite:CHUNK_ID]`. Chỉ dùng ID có trong evidence và không tự bịa ID."
 
         prompt = f"""Bạn là trợ lý học tập VLearn trung thực và chính xác. 
 Nhiệm vụ của bạn là trả lời câu hỏi của học viên CHỈ DỰA TRÊN các đoạn dẫn chứng (Evidence) dưới đây.
@@ -94,7 +90,7 @@ Nhiệm vụ của bạn là trả lời câu hỏi của học viên CHỈ DỰ
 QUY TẮC BẮT BUỘC:
 1. {citation_instruction}
 2. Chỉ sử dụng thông tin có trong các đoạn dẫn chứng. Tuyệt đối KHÔNG sử dụng kiến thức bên ngoài và KHÔNG được suy diễn/bịa đặt.
-3. Chỉ trích dẫn các đoạn dẫn chứng THỰC SỰ trả lời cho câu hỏi. KHÔNG trích dẫn các đoạn chỉ vô tình xuất hiện từ khóa nhưng nói về vấn đề khác.
+3. Chỉ trích dẫn các đoạn dẫn chứng THỰC SỰ trả lời cho câu hỏi. KHÔNG trích dẫn các đoạn chỉ vô tình xuất hiện từ khóa nhưng nói về vấn đề khác. Không cần cố dùng cả slide và video.
 4. Nếu các đoạn dẫn chứng KHÔNG chứa câu trả lời trực tiếp hoặc thông tin không đủ, hãy trả lời chính xác: "Chưa tìm thấy thông tin này trong các nguồn bài giảng đã chọn."
 5. Trình bày rõ ràng, súc tích bằng tiếng Việt.
 
@@ -120,28 +116,30 @@ CÂU HỎI CỦA HỌC VIÊN:
                         "evidence_chunks": chunks
                     }
 
-                # Filter only chunks that were actually cited in the generated answer
-                used_citations = []
-                for chk in chunks:
-                    cid = chk.get("chunk_id", "")
-                    s_name = chk.get("source_name", "")
-                    s_stem = Path(s_name).stem
-                    lbl = chk.get("timestamp_label", "")
-                    
-                    # Match if chunk_id is explicitly referenced, or source name/stem and timestamp appear in the answer
-                    if (cid and cid in raw_answer) or (s_stem in raw_answer and (lbl in raw_answer or not lbl)) or (lbl and lbl in raw_answer):
-                        used_citations.append({
-                            "chunk_id": chk["chunk_id"],
-                            "source_type": chk["source_type"],
-                            "source_name": chk["source_name"],
-                            "page": chk.get("page"),
-                            "timestamp_label": chk.get("timestamp_label"),
-                            "source_path": chk["source_path"]
-                        })
+                valid_ids = {chk["chunk_id"]: chk for chk in chunks}
+                cited_ids = []
+                for cid in re.findall(r"\[cite:([^\]]+)\]", raw_answer, flags=re.IGNORECASE):
+                    cid = cid.strip()
+                    if cid in valid_ids and cid not in cited_ids:
+                        cited_ids.append(cid)
+                used_citations = [_citation_from_chunk(valid_ids[cid]) for cid in cited_ids]
 
-                # Fallback to top chunks if regex didn't catch citations
+                # Never silently attach top chunks to an uncited answer. A
+                # bounded retry below gives the model one chance to repair it.
                 if not used_citations:
-                    used_citations = citations[:2]
+                    retry_prompt = prompt + "\n\nVALIDATION ERROR: Câu trả lời trước thiếu [cite:CHUNK_ID]. Hãy viết lại ngắn gọn và thêm ít nhất một citation ID hợp lệ."
+                    try:
+                        retry_response = client.models.generate_content(model=m, contents=retry_prompt)
+                        raw_answer = (retry_response.text or "").strip()
+                        cited_ids = [
+                            cid.strip() for cid in re.findall(r"\[cite:([^\]]+)\]", raw_answer, flags=re.IGNORECASE)
+                            if cid.strip() in valid_ids
+                        ]
+                        used_citations = [_citation_from_chunk(valid_ids[cid]) for cid in dict.fromkeys(cited_ids)]
+                    except Exception as retry_error:
+                        print(f"Citation repair failed ({retry_error})")
+                if not used_citations:
+                    continue
 
                 return {
                     "outcome": "ANSWER",
@@ -152,7 +150,8 @@ CÂU HỎI CỦA HỌC VIÊN:
             except Exception as e:
                 print(f"Model {m} failed ({e}), trying next model...")
 
-    # Offline / Deterministic fallback synthesis
+    # Offline fallback is allowed only after the evidence gate has produced
+    # direct evidence. It never uses arbitrary retrieval candidates.
     top_chunks = chunks[:2]
     summaries = []
     for tc in top_chunks:
