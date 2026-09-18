@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import re
+import shutil
 from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
@@ -53,8 +54,18 @@ def ensure_video_symlink(video_rel_path: str) -> Path:
     name = raw_path.name
     link_name = name if name.endswith(".mp4") else f"{name}.mp4"
     link_path = links_dir / link_name
-    if not link_path.exists():
-        link_path.symlink_to(raw_path)
+    # Keep a real .mp4 file. Serving a symlink to an extensionless source can
+    # produce the wrong MIME or Range behavior in Streamlit's media server.
+    if (
+        link_path.is_symlink()
+        or not link_path.is_file()
+        or link_path.stat().st_size != raw_path.stat().st_size
+    ):
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        temp_path = link_path.with_suffix(".part")
+        shutil.copyfile(raw_path, temp_path)
+        temp_path.replace(link_path)
     return link_path
 
 # Helper to render PDF page cleanly
@@ -101,6 +112,9 @@ if "pending_query" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
 # Clean theme-aware CSS
 st.markdown("""
 <style>
@@ -142,6 +156,15 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+if st.session_state.dark_mode:
+    st.markdown("""
+    <style>
+        .stApp { background: #0e1117; color: #f3f4f6; }
+        [data-testid="stChatMessage"] { background: rgba(255,255,255,0.04); border-radius: 12px; }
+        div[data-testid="stVerticalBlockBorderWrapper"] { background: rgba(255,255,255,0.03); }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Sidebar Configuration
 with st.sidebar:
@@ -209,8 +232,27 @@ source_name = " + ".join(
 )
 
 # Top Header
-st.title("📓 VLearn NotebookLM")
-st.caption("Tra cứu bài giảng bằng dẫn chứng trực tiếp từ slide và video")
+header_title, header_theme, header_clear = st.columns([0.68, 0.20, 0.12], gap="small")
+with header_title:
+    st.title("📓 VLearn NotebookLM")
+    st.caption("Tra cứu bài giảng bằng dẫn chứng trực tiếp từ slide và video")
+with header_theme:
+    st.markdown("<div style='height: 14px'></div>", unsafe_allow_html=True)
+    st.session_state.dark_mode = st.toggle("🌙 Dark", value=st.session_state.dark_mode, key="theme_toggle")
+with header_clear:
+    st.markdown("<div style='height: 14px'></div>", unsafe_allow_html=True)
+    if st.button("🗑 Clear", width="stretch", help="Xoá toàn bộ hội thoại hiện tại"):
+        for key, value in {
+            "chat_history": [],
+            "last_result": None,
+            "current_query": "",
+            "pending_query": "",
+            "active_pdf": None,
+            "active_video": None,
+            "active_pill": None,
+        }.items():
+            st.session_state[key] = value
+        st.rerun()
 
 # Main layout gives the answer more room than the inspector.
 col_studio, col_inspector = st.columns([1.2, 0.8], gap="large")
@@ -225,19 +267,20 @@ with col_studio:
         "🧩 JSON Schema Tool": "JSON Schema của Tool là gì?"
     }
 
-    st.caption("💡 Gợi ý câu hỏi nghiên cứu:")
-    selected_pill = st.pills(
-        "Gợi ý:",
-        options=list(sample_queries.keys()),
-        selection_mode="single",
-        label_visibility="collapsed",
-        key="sample_pill_selector"
-    )
-    if selected_pill and selected_pill != st.session_state.get("active_pill"):
-        st.session_state["active_pill"] = selected_pill
-        st.session_state.pending_query = sample_queries[selected_pill]
-        st.session_state.auto_search = True
-        st.rerun()
+    if not st.session_state.chat_history:
+        st.caption("💡 Bắt đầu bằng một câu hỏi:")
+        selected_pill = st.pills(
+            "Gợi ý:",
+            options=list(sample_queries.keys()),
+            selection_mode="single",
+            label_visibility="collapsed",
+            key="sample_pill_selector"
+        )
+        if selected_pill and selected_pill != st.session_state.get("active_pill"):
+            st.session_state["active_pill"] = selected_pill
+            st.session_state.pending_query = sample_queries[selected_pill]
+            st.session_state.auto_search = True
+            st.rerun()
 
     typed_query = st.chat_input(
         "Hỏi về bài giảng đang chọn...",
@@ -354,21 +397,21 @@ with col_studio:
         latest_turn = st.session_state.chat_history[-1]
         with st.chat_message("user"):
             st.markdown(latest_turn["query"])
-        if latest_turn.get("resolved_query") and latest_turn["resolved_query"] != latest_turn["query"]:
-            st.caption(f"Ngữ cảnh đã hiểu: {latest_turn['resolved_query']}")
-        outcome = res["outcome"]
-        
-        if outcome == "ANSWER":
-            st.markdown("✨ **Câu trả lời có kiểm chứng**")
-        elif outcome == "CLARIFY":
-            st.markdown("⚠️ **Cần làm rõ thêm ngữ cảnh:**")
-        else:
-            st.markdown("🚫 **Không tìm thấy trong bài giảng:**")
+        with st.chat_message("assistant"):
+            if latest_turn.get("resolved_query") and latest_turn["resolved_query"] != latest_turn["query"]:
+                st.caption(f"Ngữ cảnh đã hiểu: {latest_turn['resolved_query']}")
+            outcome = res["outcome"]
 
-        if res.get("answer_mode") == "GROUNDED_WITH_CONTEXT":
-            st.caption("Có phần kiến thức bổ sung được tách riêng, không thuộc slide/video.")
-            
-        with st.container(border=True):
+            if outcome == "ANSWER":
+                st.markdown("✨ **Câu trả lời có kiểm chứng**")
+            elif outcome == "CLARIFY":
+                st.markdown("⚠️ **Cần làm rõ thêm ngữ cảnh:**")
+            else:
+                st.markdown("🚫 **Không tìm thấy trong bài giảng:**")
+
+            if res.get("answer_mode") == "GROUNDED_WITH_CONTEXT":
+                st.caption("Có phần kiến thức bổ sung được tách riêng, không thuộc slide/video.")
+
             st.markdown(format_answer_for_display(
                 res["answer"],
                 res.get("citations", []),
