@@ -23,6 +23,7 @@ def run(golden_path: Path) -> int:
         result = retrieve_evidence(
             case["query"],
             allowed_sources=case.get("allowed_sources", ["pdf", "video"]),
+            use_dense=False,
         )
         elapsed = round(time.perf_counter() - started, 3)
         actual = {"FOUND": "ANSWER"}.get(result.get("status"), result.get("status"))

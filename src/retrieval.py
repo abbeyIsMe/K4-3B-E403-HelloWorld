@@ -7,7 +7,7 @@ from collections import Counter
 KNOWN_ENTITIES = (
     "token", "tokenizer", "react", "rag", "agent", "embedding", "hallucination",
     "context window", "system prompt", "tool calling", "function calling",
-    "double diamond", "poc canvas", "python", "fine-tuning", "temperature", "top_p",
+    "double diamond", "poc canvas", "json schema", "python", "fine-tuning", "temperature", "top_p",
     "few-shot", "zero-shot"
 )
 
@@ -234,6 +234,10 @@ def evidence_support(query: str, chunk: dict) -> dict:
         )
             or re.search(rf"(?:định nghĩa|khái niệm|được gọi là)\s+(?:về\s+)?{re.escape(entity)}", text)
             or re.search(rf"đơn vị[^.\n]{{0,80}}được gọi là\s+{re.escape(entity)}", text)
+            or (
+                entity == "json schema"
+                and re.search(rf"{re.escape(entity)}[^.\n]{{0,50}}\blà\b", text)
+            )
             or re.search(rf"{re.escape(entity)}\s*=", text)
         for entity in entities
     )

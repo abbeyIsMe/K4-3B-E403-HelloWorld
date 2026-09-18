@@ -28,5 +28,15 @@
   {"id":"V2-27","category":"source_filter","query":"Tokenizer là gì?","allowed_sources":["pdf"],"expected_outcome":"NOT_FOUND","expected_source_types":[]},
   {"id":"V2-28","category":"source_filter","query":"Cài Python phiên bản nào để làm bài lab?","allowed_sources":["video"],"expected_outcome":"NOT_FOUND","expected_source_types":[]},
   {"id":"V2-29","category":"paraphrase","query":"Một tài liệu được tách thành các đơn vị nhỏ để mô hình xử lý như thế nào?","allowed_sources":["video"],"expected_outcome":"ANSWER","expected_source_types":["video"]},
-  {"id":"V2-30","category":"paraphrase","query":"Hai tài liệu cùng số trang có chắc có cùng số token không?","allowed_sources":["video"],"expected_outcome":"ANSWER","expected_source_types":["video"],"expected_citation":"00:12 - 00:23"}
+  {"id":"V2-30","category":"paraphrase","query":"Hai tài liệu cùng số trang có chắc có cùng số token không?","allowed_sources":["video"],"expected_outcome":"ANSWER","expected_source_types":["video"],"expected_citation":"00:12 - 00:23"},
+  {"id":"V2-31","category":"definition","query":"Context window = token budget nghĩa là gì?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"],"expected_citation":"Trang 70"},
+  {"id":"V2-32","category":"lookup","query":"Một prompt tốt cần chia rõ những thành phần nào?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"]},
+  {"id":"V2-33","category":"definition","query":"JSON Schema của Tool là gì?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"],"expected_citation":"Trang 136"},
+  {"id":"V2-34","category":"procedure","query":"Enum dùng để làm gì trong tool schema?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"],"expected_citation":"Trang 140"},
+  {"id":"V2-35","category":"domain","query":"Hallucination là một failure mode nào trong hệ thống AI?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"]},
+  {"id":"V2-36","category":"lookup","query":"Agent có những khối kiến trúc chính nào?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"],"expected_citation":"Trang 17"},
+  {"id":"V2-37","category":"comparison","query":"Khi nào FAQ chatbot chưa cần trở thành agent?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"],"expected_citation":"Trang 14"},
+  {"id":"V2-38","category":"not_found","query":"Hạn nộp hackathon của nhóm là mấy giờ?","allowed_sources":["pdf","video"],"expected_outcome":"NOT_FOUND","expected_source_types":[]},
+  {"id":"V2-39","category":"source_filter","query":"Các bước Double Diamond là gì?","allowed_sources":["video"],"expected_outcome":"ANSWER","expected_source_types":["video"]},
+  {"id":"V2-40","category":"source_filter","query":"JSON Schema của Tool là gì?","allowed_sources":["video"],"expected_outcome":"NOT_FOUND","expected_source_types":[]}
 ]

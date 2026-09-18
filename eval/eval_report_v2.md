@@ -3,7 +3,7 @@
 ## Scope
 
 - Golden set: `eval/golden_set_v2.json`
-- Cases: **30** across Day 1–5, source filters, ambiguity, out-of-scope requests, prompt injection, paraphrase and retrieval noise.
+- Cases: **40** across Day 1–5, source filters, ambiguity, out-of-scope requests, prompt injection, paraphrase and retrieval noise.
 - Runner: `scripts/run_eval_v2.py`
 - Mode: offline retrieval/evidence evaluation; no LLM call is required.
 - Corpus: 672 prepared chunks and existing vector artifacts.
@@ -12,13 +12,13 @@
 
 | Metric | Result |
 |---|---:|
-| Cases passed | **30 / 30** |
+| Cases passed | **40 / 40** |
 | Evidence/outcome pass rate | **100.0%** |
 | Direct-evidence packet cleanliness | **100.0%** |
 | Final LLM factuality | Not measured in this offline run |
 | Final LLM citation precision | Not measured in this offline run |
 
-The evaluator treats `FOUND` as `ANSWER` at the retrieval layer. Every returned chunk must be marked `direct`; weak keyword-only candidates are rejected. The three explicit definition-gap cases for RAG, Embedding and Hallucination correctly return `NOT_FOUND` because the prepared corpus mentions those terms but does not contain a direct definition suitable for a grounded answer.
+The evaluator treats `FOUND` as `ANSWER` at the retrieval layer. Every returned chunk must be marked `direct`; weak keyword-only candidates are rejected. The explicit definition-gap cases for RAG, Embedding and the short Hallucination query correctly return `NOT_FOUND` because the prepared corpus does not contain a direct definition suitable for those exact questions.
 
 ## Reproduce
 

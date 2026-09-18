@@ -123,9 +123,9 @@ Loại: [] Tối ưu tính năng có sẵn  [ x] Tính năng mới
     - Lớp ④: TC02, TC09, TC10, TC11 (Token, Tokenizer, Context Window).
   - 5 case Happy path: TC01, TC03, TC04, TC09, TC11.
   - Bộ test chạy tự động bằng `scripts/run_eval.py` với model `gemini-3.1-flash-lite`.
-- V2 evidence golden set (30 cases — file `eval/golden_set_v2.json`):
+- V2 evidence golden set (40 cases — file `eval/golden_set_v2.json`):
   - Bổ sung definition gap, source filter, prompt injection, paraphrase, ambiguity và keyword-noise cases xuyên Day 1–5.
-  - Chạy bằng `scripts/run_eval_v2.py` không cần gọi LLM: **30/30 (100%)** direct-evidence/outcome pass, xem `eval/eval_report_v2.md`.
+  - Chạy bằng `scripts/run_eval_v2.py` không cần gọi LLM: **40/40 (100%)** direct-evidence/outcome pass, xem `eval/eval_report_v2.md`.
   - Đây là kết quả retrieval/evidence layer; chưa được ghi là factuality/citation precision của output Gemini cuối.
 - Quality bar (chốt từ hạn chốt spec của khoá, giữ nguyên sau đó): *"Đạt khi ≥ 85% qua bộ, và Factuality đạt 100% (không có hallucination bịa nguồn), Citation Precision ≥ 80%"*
 - Kết quả các lượt chạy (bảng % — cập nhật đến trước CP6):
@@ -135,7 +135,7 @@ Loại: [] Tối ưu tính năng có sẵn  [ x] Tính năng mới
   | **Lượt 1 (Baseline)** | Dùng prompt thường của VLearn (không ép strict grounding) | **13 / 22 (59,1%)** | 68,2% | 50,0% | AI tự bịa kiến thức ngoài bài Day01; không hỏi lại ở case câu hỏi cụt; tỷ lệ thiếu citation cao tương đương data mining. |
   | **Lượt 2 (Grounded Prompting v0.1)** | System Prompt HelloWorld: bắt buộc trích dẫn từ context; nếu similarity thấp thì kích hoạt template từ chối | **19 / 22 (86,4%)** | **100%** | **86,4%** | **Đạt Quality Bar!** Còn 3 case chưa tối ưu: 2 case gõ sai chính tả nặng khiến retrieval chưa bắt được, 1 case cite lệch 1 trang slide liền kề. |
   | **Lượt 3 (v1.0 Final — CP3)** | Hybrid BM25+Dense Vector+RRF + Intent-Aware Reranking + Strict Grounding + Cross-filter support | **12 / 12 (100,0%)** | **100%** | **100%** | **Đạt tuyệt đối.** Toàn bộ outcome (`ANSWER`, `CLARIFY`, `NOT_FOUND`) và citation đều chính xác. |
-  | **Lượt 4 (V2 evidence gate)** | Candidate pool relevance-first + direct-evidence gate + strict citation IDs; offline, không gọi LLM | **30 / 30 (100,0%)** | **Chưa đo** | **Chưa đo** | Đạt ở retrieval/evidence layer; cần chạy end-to-end Gemini để kết luận factuality/citation của answer. |
+  | **Lượt 4 (V2 evidence gate)** | Candidate pool relevance-first + direct-evidence gate + strict citation IDs; offline, không gọi LLM | **40 / 40 (100,0%)** | **Chưa đo** | **Chưa đo** | Đạt ở retrieval/evidence layer; cần chạy end-to-end Gemini để kết luận factuality/citation của answer. |
 
 ## §8. Phân công & kế hoạch
 - Phân công có tên: spec / evidence / prompt / code / demo:
