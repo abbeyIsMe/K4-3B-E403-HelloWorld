@@ -11,7 +11,7 @@
   {"id":"V2-10","category":"definition_gap","query":"Hallucination là gì?","allowed_sources":["pdf","video"],"expected_outcome":"NOT_FOUND","expected_source_types":[]},
   {"id":"V2-11","category":"procedure","query":"ReAct pattern hoạt động ra sao?","allowed_sources":["pdf","video"],"expected_outcome":"ANSWER","expected_source_types":["pdf","video"]},
   {"id":"V2-12","category":"procedure","query":"Các bước của Double Diamond là gì?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"]},
-  {"id":"V2-13","category":"lookup","query":"PoC Canvas dùng để làm gì trong AI Product?","allowed_sources":["pdf","video"],"expected_outcome":"ANSWER","expected_source_types":["pdf"]},
+  {"id":"V2-13","category":"definition_gap","query":"PoC Canvas dùng để làm gì trong AI Product?","allowed_sources":["pdf","video"],"expected_outcome":"NOT_FOUND","expected_source_types":[]},
   {"id":"V2-14","category":"lookup","query":"Các nhà cung cấp LLM API được giới thiệu là những ai?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"],"expected_citation":"Trang 7"},
   {"id":"V2-15","category":"lookup","query":"Yêu cầu cài đặt phiên bản Python nào trên máy local để làm bài lab?","allowed_sources":["pdf"],"expected_outcome":"ANSWER","expected_source_types":["pdf"],"expected_citation":"Trang 9"},
   {"id":"V2-16","category":"definition","query":"System prompt là gì?","allowed_sources":["pdf","video"],"expected_outcome":"ANSWER","expected_source_types":["pdf","video"]},

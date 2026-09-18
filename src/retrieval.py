@@ -7,7 +7,7 @@ from collections import Counter
 KNOWN_ENTITIES = (
     "token", "tokenizer", "react", "rag", "agent", "embedding", "hallucination",
     "context window", "system prompt", "tool calling", "function calling",
-    "double diamond", "poc canvas", "fine-tuning", "temperature", "top_p",
+    "double diamond", "poc canvas", "python", "fine-tuning", "temperature", "top_p",
     "few-shot", "zero-shot"
 )
 
@@ -258,7 +258,7 @@ def evidence_support(query: str, chunk: dict) -> dict:
             return {"support": "direct", "score": round(0.65 + min(0.3, lexical_ratio), 3), "reason": "Có thuật ngữ cùng ràng buộc hoặc phép tính liên quan."}
         return {"support": "partial", "score": round(min(0.45, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng thiếu dữ kiện tính toán."}
 
-    if lexical_ratio >= 0.45 or (entity_hit and lexical_ratio >= 0.25):
+    if lexical_ratio >= 0.60 or (entity_hit and lexical_ratio >= 0.25):
         return {"support": "direct", "score": round(0.45 + min(0.5, lexical_ratio), 3), "reason": "Các thuật ngữ chính của câu hỏi cùng xuất hiện trong evidence."}
     return {"support": "partial", "score": round(lexical_ratio, 3), "reason": "Chỉ khớp một phần thuật ngữ."}
 
