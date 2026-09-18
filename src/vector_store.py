@@ -102,7 +102,7 @@ def embed_query(query: str):
     return vec
 
 
-def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
+def hybrid_search(query: str, lesson_id="all", lesson_ids=None, allowed_source_map=None, allowed_sources=None, top_k=3):
     """
     Hybrid Search combining:
     1. Dense Semantic Vector Search (understanding concept meaning & context)
@@ -111,6 +111,22 @@ def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
     """
     if allowed_sources is None:
         allowed_sources = ["pdf", "video"]
+
+    selected_lessons = set(lesson_ids or [])
+    source_map = {
+        key: set(value)
+        for key, value in (allowed_source_map or {}).items()
+    }
+
+    def lesson_allowed(chunk):
+        if selected_lessons:
+            if chunk.get("lesson_id") not in selected_lessons:
+                return False
+        elif lesson_id and lesson_id != "all" and chunk.get("lesson_id") != lesson_id:
+            return False
+        if source_map:
+            return chunk.get("source_type") in source_map.get(chunk.get("lesson_id"), set())
+        return True
         
     try:
         embeddings, chunks = build_or_load_vector_index()
@@ -118,7 +134,7 @@ def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
         print(f"Vector index load failed: {e}. Falling back to BM25.")
         from src.retrieval import bm25_candidates
         eligible = [
-            chk for chk in chunks if (not lesson_id or lesson_id == "all" or chk.get("lesson_id") == lesson_id)
+            chk for chk in chunks if lesson_allowed(chk)
             and chk.get("source_type") in allowed_sources
         ] if "chunks" in locals() else []
         if not eligible:
@@ -135,7 +151,7 @@ def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
         eligible = [
             chk for idx, chk in enumerate(chunks)
             if idx < len(embeddings)
-            and (not lesson_id or lesson_id == "all" or chk.get("lesson_id") == lesson_id)
+            and lesson_allowed(chk)
             and chk.get("source_type") in allowed_sources
         ]
         return {"status": "FOUND", "chunks": bm25_candidates(query, eligible, top_k=top_k)}
@@ -145,7 +161,7 @@ def hybrid_search(query: str, lesson_id="all", allowed_sources=None, top_k=3):
     vid_indices = []
     
     for idx, chk in enumerate(chunks):
-        if lesson_id and lesson_id != "all" and chk.get("lesson_id") != lesson_id:
+        if not lesson_allowed(chk):
             continue
         if chk["source_type"] == "pdf" and "pdf" in allowed_sources:
             pdf_indices.append(idx)

@@ -115,6 +115,14 @@ if "chat_history" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
+LESSON_OPTIONS = {
+    "day-01": "Day 01 · AI & LLM Foundation",
+    "day-02": "Day 02 · Define Problem For AI",
+    "day-03": "Day 03 · Design Pattern ReAct",
+    "day-04": "Day 04 · Prompt Engineering & Tool Calling",
+    "day-05": "Day 05 · AI Product Thinking & Requirement",
+}
+
 # Clean theme-aware CSS
 st.markdown("""
 <style>
@@ -340,53 +348,6 @@ with st.sidebar:
         default_idx = models_list.index(current_default_model) if current_default_model in models_list else 0
         selected_model = st.selectbox("Mô hình", models_list, index=default_idx)
 
-    st.subheader("Phạm vi nguồn")
-    
-    lesson_options = {
-        "all": "🔍 Toàn Bộ Khóa Học (Day 1 → Day 5)",
-        "day-01": "Day 01: AI & LLM Foundation",
-        "day-02": "Day 02: Define Problem For AI",
-        "day-03": "Day 03: Design Pattern ReAct",
-        "day-04": "Day 04: Prompt Engineering & Tool Calling",
-        "day-05": "Day 05: AI Product Thinking & Requirement"
-    }
-    
-    selected_lesson_key = st.selectbox(
-        "Lọc bài học:",
-        options=list(lesson_options.keys()),
-        format_func=lambda k: lesson_options[k],
-        index=0
-    )
-    
-    use_pdf = st.checkbox("📄 Slide bài giảng (đến bài hiện tại)", value=True)
-    use_video = st.checkbox("🎥 Video bài giảng (đến bài hiện tại)", value=True)
-    
-    allowed_sources = []
-    if use_pdf:
-        allowed_sources.append("pdf")
-    if use_video:
-        allowed_sources.append("video")
-        
-    st.caption("Corpus Day01 → bài hiện tại · 375 trang slide · 16 video · 672 evidence chunks")
-
-# Do not leave an answer from a previous source scope on screen after the
-# user changes the lesson or source filters.
-scope_signature = (selected_lesson_key, tuple(allowed_sources))
-previous_scope = st.session_state.get("scope_signature")
-if previous_scope is not None and previous_scope != scope_signature:
-    st.session_state.last_result = None
-    st.session_state.active_pdf = None
-    st.session_state.active_video = None
-    st.session_state.chat_history = []
-    st.session_state.pending_query = ""
-    st.session_state.active_pill = None
-st.session_state.scope_signature = scope_signature
-
-scope_name = lesson_options[selected_lesson_key]
-source_name = " + ".join(
-    {"pdf": "slide", "video": "video"}[source] for source in allowed_sources
-)
-
 # Notebook controls
 header_title, header_theme, header_clear = st.columns([0.68, 0.20, 0.12], gap="small")
 with header_title:
@@ -416,32 +377,70 @@ col_sources, col_studio, col_inspector = st.columns([0.23, 0.49, 0.28], gap="med
 # --- LEFT COLUMN: SOURCES ---
 with col_sources:
     st.markdown("### Sources")
-    st.caption("Nguồn được dùng cho notebook này")
+    st.caption("Chọn nguồn được phép dùng làm citation")
 
     with st.container(border=True):
-        st.markdown("**📚 VLearn · Day01 → bài hiện tại**")
-        st.caption(scope_name)
+        st.markdown("**📚 VLearn · kho bài giảng**")
+        st.caption("Bật từng ngày để chọn slide/video làm nguồn trả lời")
         st.divider()
 
-        source_rows = [
-            ("📄", "Slide bài giảng", "đến bài hiện tại", "pdf"),
-            ("🎥", "Video bài giảng", "đến bài hiện tại", "video"),
+        for lesson_id, lesson_name in LESSON_OPTIONS.items():
+            with st.expander(lesson_name, expanded=lesson_id == "day-05"):
+                st.caption("Chỉ chọn nguồn; artifact không mở hoặc tải từ panel này.")
+                st.checkbox(
+                    "Slide PDF",
+                    value=True,
+                    key=f"source_pdf_{lesson_id}",
+                )
+                st.checkbox(
+                    "Video bài giảng",
+                    value=True,
+                    key=f"source_video_{lesson_id}",
+                )
+
+        st.divider()
+        st.caption("Citation chỉ lấy từ các Day và loại nguồn đang được tick.")
+
+    allowed_source_map = {
+        lesson_id: [
+            source_type
+            for source_type in ("pdf", "video")
+            if st.session_state.get(f"source_{source_type}_{lesson_id}", True)
         ]
-        for icon, label, count, source_type in source_rows:
-            active = source_type in allowed_sources
-            state = "Đang dùng" if active else "Đã tắt"
-            state_class = "source-active" if active else "source-muted"
-            st.markdown(
-                f"<div class='source-row {state_class}'>"
-                f"<span class='source-icon'>{icon}</span>"
-                f"<span><strong>{label}</strong><small>{count} · {state}</small></span>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
+        for lesson_id in LESSON_OPTIONS
+    }
+    selected_lesson_ids = [
+        lesson_id for lesson_id, sources in allowed_source_map.items() if sources
+    ]
+    allowed_sources = [
+        source_type
+        for source_type in ("pdf", "video")
+        if any(source_type in sources for sources in allowed_source_map.values())
+    ]
+    if selected_lesson_ids:
+        last_selected_day = selected_lesson_ids[-1]
+        scope_name = f"{LESSON_OPTIONS[selected_lesson_ids[0]]} → {LESSON_OPTIONS[last_selected_day]}"
+    else:
+        scope_name = "Chưa chọn bài học"
+    source_name = " + ".join({"pdf": "slide", "video": "video"}[source] for source in allowed_sources)
 
-        st.divider()
-        st.caption("Đổi bài học hoặc bật/tắt nguồn trong Notebook settings.")
-        st.metric("Evidence", "672 chunks")
+    st.metric("Đang chọn", f"{len(selected_lesson_ids)} Day")
+
+# Do not leave an answer from a previous source scope on screen after the
+# user changes the lesson or source filters.
+scope_signature = (
+    tuple(selected_lesson_ids),
+    tuple((lesson_id, tuple(sources)) for lesson_id, sources in allowed_source_map.items()),
+)
+previous_scope = st.session_state.get("scope_signature")
+if previous_scope is not None and previous_scope != scope_signature:
+    st.session_state.last_result = None
+    st.session_state.active_pdf = None
+    st.session_state.active_video = None
+    st.session_state.chat_history = []
+    st.session_state.pending_query = ""
+    st.session_state.active_pill = None
+st.session_state.scope_signature = scope_signature
 
 # --- CENTER COLUMN: NOTEBOOK CHAT ---
 with col_studio:
@@ -510,7 +509,9 @@ with col_studio:
                 else:
                     ret_res = retrieve_evidence(
                         query=search_query,
-                        lesson_id=selected_lesson_key,
+                        lesson_id="all",
+                        lesson_ids=selected_lesson_ids,
+                        allowed_source_map=allowed_source_map,
                         allowed_sources=allowed_sources
                     )
                 grounded_res = generate_grounded_answer(

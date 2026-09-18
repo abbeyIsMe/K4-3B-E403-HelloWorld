@@ -411,13 +411,29 @@ def bm25_candidates(query: str, chunks: list[dict], top_k: int = 24, min_score: 
     ]
 
 
-def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3, min_score=0.0, use_dense=True):
+def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3, min_score=0.0, use_dense=True, lesson_ids=None, allowed_source_map=None):
     """
     Retrieve candidate chunks with dual-source balancing (PDF and Video).
     top_k: Number of top chunks per source type (e.g. 3 PDF + 3 Video).
     """
     if allowed_sources is None:
         allowed_sources = ["pdf", "video"]
+
+    selected_lessons = set(lesson_ids or [])
+    source_map = {
+        key: set(value)
+        for key, value in (allowed_source_map or {}).items()
+    }
+
+    def lesson_allowed(chunk):
+        if selected_lessons:
+            if chunk.get("lesson_id") not in selected_lessons:
+                return False
+        elif lesson_id and lesson_id != "all" and chunk.get("lesson_id") != lesson_id:
+            return False
+        if source_map:
+            return chunk.get("source_type") in source_map.get(chunk.get("lesson_id"), set())
+        return True
 
     if is_explicitly_out_of_scope(query):
         return {
@@ -445,11 +461,11 @@ def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3
     with open(chunks_file, "r", encoding="utf-8") as f:
         for line in f:
             chk = json.loads(line)
-            if lesson_id and lesson_id != "all" and chk.get("lesson_id") != lesson_id:
+            if not lesson_allowed(chk):
                 continue
-            if chk.get("source_type") == "pdf" and "pdf" in allowed_sources:
+            if chk.get("source_type") == "pdf" and "pdf" in allowed_sources and lesson_allowed(chk):
                 pdf_chunks.append(chk)
-            elif chk.get("source_type") == "video" and "video" in allowed_sources:
+            elif chk.get("source_type") == "video" and "video" in allowed_sources and lesson_allowed(chk):
                 video_chunks.append(chk)
 
     if not pdf_chunks and not video_chunks:
@@ -474,7 +490,14 @@ def retrieve_evidence(query: str, lesson_id="all", allowed_sources=None, top_k=3
     if use_dense and embed_file.exists():
         try:
             from src.vector_store import hybrid_search
-            res = hybrid_search(query, lesson_id=lesson_id, allowed_sources=allowed_sources, top_k=candidate_limit)
+            res = hybrid_search(
+                query,
+                lesson_id=lesson_id,
+                lesson_ids=selected_lessons,
+                allowed_source_map=source_map,
+                allowed_sources=allowed_sources,
+                top_k=candidate_limit,
+            )
             if res and res.get("status") == "FOUND":
                 selected = select_evidence(query, res.get("chunks", []), max_evidence=top_k)
                 if selected:
