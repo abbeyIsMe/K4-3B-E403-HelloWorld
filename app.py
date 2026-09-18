@@ -128,6 +128,73 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
+    .vlearn-nav {
+        display: flex;
+        align-items: center;
+        gap: 2.1rem;
+        min-height: 4.4rem;
+        margin: -1.2rem -1rem 1.8rem;
+        padding: 0 1.25rem;
+        border-bottom: 1px solid #34373b;
+        background: #151515;
+        color: #f7f7f7;
+    }
+
+    .vlearn-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        min-width: 14rem;
+        font-size: 1.7rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+    }
+
+    .vlearn-brand-mark {
+        color: #ffffff;
+        font-size: 2.3rem;
+        line-height: 1;
+    }
+
+    .vlearn-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        height: 4.4rem;
+        padding: 0 0.15rem;
+        border-bottom: 3px solid transparent;
+        color: #f5f5f5;
+        font-size: 1.1rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .vlearn-nav-link.muted { color: #d7d7d7; }
+    .vlearn-nav-link.active { border-bottom-color: #df252d; color: #ffffff; }
+    .vlearn-nav-icon { color: #b9dcff; font-size: 1.45rem; }
+    .vlearn-nav-badge {
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        background: #f2dce0;
+        color: #c51f2a;
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    .vlearn-nav-spacer { flex: 1; }
+    .vlearn-locale { color: #ef2732; font-weight: 800; }
+    .vlearn-locale.dim { color: #b6b6b6; }
+    .vlearn-avatar {
+        display: grid;
+        width: 2.45rem;
+        height: 2.45rem;
+        place-items: center;
+        border-radius: 50%;
+        background: #0ba7e8;
+        color: #09202e;
+        font-weight: 800;
+    }
+
     div[data-testid="stForm"] {
         border: 1px solid rgba(128, 128, 128, 0.25) !important;
         border-radius: 8px !important;
@@ -231,10 +298,23 @@ source_name = " + ".join(
     {"pdf": "slide", "video": "video"}[source] for source in allowed_sources
 )
 
-# Top Header
+# VLearn-style navigation shell. Notebook is the active destination.
+st.markdown("""
+<nav class="vlearn-nav" aria-label="VLearn navigation">
+    <div class="vlearn-brand"><span class="vlearn-brand-mark">◆</span><span>VLEARN</span></div>
+    <div class="vlearn-nav-link muted"><span class="vlearn-nav-icon">⌂</span><span>Trang chủ</span></div>
+    <div class="vlearn-nav-link muted"><span class="vlearn-nav-icon">▣</span><span>Khóa học</span></div>
+    <div class="vlearn-nav-link active"><span class="vlearn-nav-icon">▤</span><span>Notebook</span><span class="vlearn-nav-badge">Mới</span></div>
+    <div class="vlearn-nav-link muted"><span class="vlearn-nav-icon">⚗</span><span>Lab</span></div>
+    <div class="vlearn-nav-spacer"></div>
+    <span class="vlearn-locale dim">EN</span><span class="vlearn-locale">VI</span><span>☼</span><span>♧</span><span class="vlearn-avatar">T</span>
+</nav>
+""", unsafe_allow_html=True)
+
+# Notebook controls
 header_title, header_theme, header_clear = st.columns([0.68, 0.20, 0.12], gap="small")
 with header_title:
-    st.title("📓 VLearn NotebookLM")
+    st.title("Notebook")
     st.caption("Tra cứu bài giảng bằng dẫn chứng trực tiếp từ slide và video")
 with header_theme:
     st.markdown("<div style='height: 14px'></div>", unsafe_allow_html=True)
