@@ -35,6 +35,28 @@ def _citation_from_chunk(chunk: dict) -> dict:
     }
 
 
+def _evidence_fallback(chunks: list[dict]) -> dict:
+    """Answer from retrieved text when the model refuses a contextual answer."""
+    summaries = []
+    citations = []
+    for chunk in chunks[:3]:
+        lead_text = " ".join(chunk["text"].split())
+        if len(lead_text) > 280:
+            lead_text = lead_text[:280].rsplit(" ", 1)[0] + "..."
+        summaries.append(f"- {lead_text} [cite:{chunk['chunk_id']}]")
+        citations.append(_citation_from_chunk(chunk))
+
+    return {
+        "outcome": "ANSWER",
+        "answer": (
+            "Bài giảng chưa đưa ra định nghĩa đầy đủ cho thuật ngữ này, "
+            "nhưng có đề cập trong ngữ cảnh sau:\n" + "\n".join(summaries)
+        ),
+        "citations": citations,
+        "evidence_chunks": chunks,
+    }
+
+
 def generate_grounded_answer(query: str, retrieval_result: dict, api_key: str = None, model_name: str = None):
     """
     Generate grounded answer from retrieved chunks.
@@ -125,13 +147,8 @@ CÂU HỎI CỦA HỌC VIÊN:
                     "chưa tìm thấy thông tin" in raw_answer.lower()
                     or "không tìm thấy thông tin" in raw_answer.lower()
                 )
-                if says_not_found and not used_citations:
-                    return {
-                        "outcome": "NOT_FOUND",
-                        "answer": raw_answer,
-                        "citations": [],
-                        "evidence_chunks": []
-                    }
+                if says_not_found:
+                    return _evidence_fallback(chunks)
 
                 # Never silently attach top chunks to an uncited answer. A
                 # bounded retry below gives the model one chance to repair it.
@@ -162,19 +179,4 @@ CÂU HỎI CỦA HỌC VIÊN:
 
     # Offline fallback is allowed only after the evidence gate has produced
     # direct evidence. It never uses arbitrary retrieval candidates.
-    top_chunks = chunks[:2]
-    summaries = []
-    for tc in top_chunks:
-        lead_text = tc["text"].replace("\n", " ").strip()
-        if len(lead_text) > 200:
-            lead_text = lead_text[:200] + "..."
-        summaries.append(f"- Theo {tc['source_name']} ({tc['timestamp_label']}): {lead_text}")
-        
-    answer = "\n".join(summaries)
-    
-    return {
-        "outcome": "ANSWER",
-        "answer": answer,
-        "citations": citations,
-        "evidence_chunks": chunks
-    }
+    return _evidence_fallback(chunks)

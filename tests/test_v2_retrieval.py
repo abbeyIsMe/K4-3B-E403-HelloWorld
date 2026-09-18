@@ -1,7 +1,7 @@
 import unittest
 
 from src.retrieval import evidence_support, is_query_ambiguous, normalize_query, select_evidence
-from src.grounded_answer import generate_grounded_answer
+from src.grounded_answer import _evidence_fallback, generate_grounded_answer
 from src.query_context import resolve_query
 
 
@@ -100,6 +100,18 @@ class EvidenceGateTests(unittest.TestCase):
         )
         self.assertEqual(result["outcome"], "ANSWER")
         self.assertEqual([citation["chunk_id"] for citation in result["citations"]], ["direct"])
+
+    def test_contextual_fallback_is_answer_with_real_citations(self):
+        pii = chunk(
+            "pii-context",
+            "Privacy cần xác định có PII hoặc dữ liệu nhạy cảm không và áp dụng masking.",
+            source_type="pdf",
+        )
+        result = _evidence_fallback([pii])
+        self.assertEqual(result["outcome"], "ANSWER")
+        self.assertIn("chưa đưa ra định nghĩa đầy đủ", result["answer"])
+        self.assertIn("[cite:pii-context]", result["answer"])
+        self.assertEqual(result["citations"][0]["chunk_id"], "pii-context")
 
 
 if __name__ == "__main__":
