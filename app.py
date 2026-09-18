@@ -21,6 +21,7 @@ load_dotenv(repo_root / ".env")
 
 from src.retrieval import retrieve_evidence
 from src.grounded_answer import generate_grounded_answer, get_available_models
+from src.query_context import resolve_query
 
 
 def format_answer_for_display(answer: str, citations: list[dict]) -> str:
@@ -266,20 +267,35 @@ with col_studio:
             st.warning("Vui lòng chọn ít nhất một nguồn ở thanh cài đặt bên trái!")
         else:
             with st.spinner(f"Đang tra cứu {scope_name} · nguồn: {source_name}..."):
-                ret_res = retrieve_evidence(
-                    query=active_query.strip(),
-                    lesson_id=selected_lesson_key,
-                    allowed_sources=allowed_sources
+                query_resolution = resolve_query(
+                    active_query,
+                    st.session_state.chat_history,
                 )
+                search_query = query_resolution["query"]
+                if query_resolution["status"] == "CLARIFY":
+                    ret_res = {
+                        "status": "CLARIFY",
+                        "reason": query_resolution["reason"],
+                        "chunks": [],
+                    }
+                else:
+                    ret_res = retrieve_evidence(
+                        query=search_query,
+                        lesson_id=selected_lesson_key,
+                        allowed_sources=allowed_sources
+                    )
                 grounded_res = generate_grounded_answer(
-                    query=active_query.strip(),
+                    query=search_query,
                     retrieval_result=ret_res,
                     api_key=api_key,
                     model_name=selected_model
                 )
+                grounded_res["original_query"] = active_query.strip()
+                grounded_res["resolved_query"] = search_query
                 st.session_state.last_result = grounded_res
                 st.session_state.chat_history.append({
                     "query": active_query.strip(),
+                    "resolved_query": search_query,
                     "result": grounded_res,
                 })
                 st.session_state.pending_query = ""
@@ -327,6 +343,8 @@ with col_studio:
         with st.chat_message("user"):
             st.markdown(turn["query"])
         with st.chat_message("assistant"):
+            if turn.get("resolved_query") and turn["resolved_query"] != turn["query"]:
+                st.caption(f"Ngữ cảnh đã hiểu: {turn['resolved_query']}")
             st.markdown(format_answer_for_display(
                 turn["result"]["answer"],
                 turn["result"].get("citations", []),
@@ -336,6 +354,8 @@ with col_studio:
         latest_turn = st.session_state.chat_history[-1]
         with st.chat_message("user"):
             st.markdown(latest_turn["query"])
+        if latest_turn.get("resolved_query") and latest_turn["resolved_query"] != latest_turn["query"]:
+            st.caption(f"Ngữ cảnh đã hiểu: {latest_turn['resolved_query']}")
         outcome = res["outcome"]
         
         if outcome == "ANSWER":

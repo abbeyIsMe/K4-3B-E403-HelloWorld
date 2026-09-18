@@ -2,6 +2,7 @@ import unittest
 
 from src.retrieval import evidence_support, is_query_ambiguous, normalize_query, select_evidence
 from src.grounded_answer import generate_grounded_answer
+from src.query_context import resolve_query
 
 
 def chunk(chunk_id, text, source_type="video"):
@@ -34,6 +35,24 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertTrue(is_query_ambiguous("Nó hoạt động thế nào?"))
         self.assertTrue(is_query_ambiguous("Còn nhược điểm thì sao?"))
         self.assertTrue(is_query_ambiguous("Cho ví dụ đi"))
+
+    def test_followup_uses_latest_grounded_subject(self):
+        history = [{
+            "query": "PII là gì?",
+            "resolved_query": "PII là gì?",
+            "result": {"outcome": "ANSWER"},
+        }]
+        resolved = resolve_query("Còn nhược điểm thì sao?", history)
+        self.assertEqual(resolved["status"], "READY")
+        self.assertEqual(resolved["query"], "pii: Còn nhược điểm thì sao?")
+        self.assertTrue(resolved["used_context"])
+
+    def test_followup_without_grounded_subject_stays_clarify(self):
+        resolved = resolve_query("Còn nhược điểm thì sao?", [{
+            "query": "Giải thích đi",
+            "result": {"outcome": "CLARIFY"},
+        }])
+        self.assertEqual(resolved["status"], "CLARIFY")
 
     def test_definition_rejects_token_budget_noise(self):
         definition = chunk("definition", "Token là đơn vị nhỏ mà mô hình ngôn ngữ dùng để xử lý văn bản.")
