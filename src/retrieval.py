@@ -9,7 +9,7 @@ KNOWN_ENTITIES = (
     "token", "tokenizer", "react", "rag", "agent", "embedding", "hallucination", "llm", "enum",
     "context window", "system prompt", "tool calling", "function calling",
     "double diamond", "poc canvas", "json schema", "pii", "python", "fine-tuning", "temperature", "top_p",
-    "few-shot", "zero-shot"
+    "few-shot", "zero-shot", "prompt", "tool", "schema", "tài liệu", "document", "chunk"
 )
 
 CONTEXT_RELATION_MARKERS = (
@@ -43,7 +43,7 @@ VIETNAMESE_STOPWORDS = {
     "và", "với", "cho", "của", "được", "có", "không", "những", "các", "một",
     "thì", "mà", "đến", "từ", "vào", "ra", "đã", "đang", "sẽ", "phải", "bị",
     "bạn", "mình", "em", "anh", "chị", "tôi", "này", "đó", "kia", "ạ", "nhé",
-    "nhỉ", "hả", "nữa", "rồi", "lại", "thôi"
+    "nhỉ", "hả", "nữa", "rồi", "lại", "thôi", "ai"
 }
 
 class BM25Retriever:
@@ -249,10 +249,15 @@ def query_anchors(query: str) -> list[str]:
 
 def has_contextual_relation(anchor: str, text: str) -> bool:
     """Find an explanatory relation in the same sentence/line as an anchor."""
-    pattern = re.escape(anchor).replace(r"\-", r"[\s-]+")
+    folded_anchor = _strip_diacritics(anchor.lower())
+    pattern = re.escape(folded_anchor).replace(r"\-", r"[\s-]+")
+    pattern = rf"(?<!\w){pattern}(?!\w)"
+    folded_markers = [_strip_diacritics(marker) for marker in CONTEXT_RELATION_MARKERS]
     for segment in re.split(r"[\n.!?;]+", text):
-        if re.search(pattern, segment, flags=re.IGNORECASE) and any(
-            marker in segment for marker in CONTEXT_RELATION_MARKERS
+        folded_segment = _strip_diacritics(segment.lower())
+        if re.search(pattern, folded_segment) and any(
+            re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", folded_segment)
+            for marker in folded_markers
         ):
             return True
     return False
@@ -272,6 +277,7 @@ def evidence_support(query: str, chunk: dict) -> dict:
     text_terms = _content_tokens(text)
     entities = query_anchors(query)
     known_entities = [entity for entity in KNOWN_ENTITIES if entity in q]
+    meaningful_entities = [entity for entity in entities if entity not in {"tài liệu", "document", "chunk"}]
     overlap = q_terms & text_terms
     lexical_ratio = len(overlap) / max(1, len(q_terms))
     entity_hit = any(re.search(re.escape(entity).replace(r"\-", r"[\s-]+"), text) for entity in entities)
@@ -289,7 +295,7 @@ def evidence_support(query: str, chunk: dict) -> dict:
             or re.search(rf"{re.escape(entity)}\s*=", text)
         for entity in entities
     )
-    contextual_hit = any(has_contextual_relation(entity, text) for entity in entities)
+    contextual_hit = any(has_contextual_relation(entity, text) for entity in meaningful_entities)
     calculation_hit = entity_hit and (
         any(marker in text for marker in CALCULATION_MARKERS)
         or bool(re.search(r"\d+(?:[.,]\d+)?\s*(?:token|%|giây|phút|trang)", text))
@@ -304,7 +310,7 @@ def evidence_support(query: str, chunk: dict) -> dict:
     if intent == "definition":
         if definition_hit:
             return {"support": "direct", "score": round(0.75 + min(0.2, lexical_ratio), 3), "reason": "Có thực thể và câu mô tả định nghĩa."}
-        if contextual_hit and len(entities) == 1:
+        if contextual_hit and len(meaningful_entities) == 1:
             return {"support": "contextual", "score": round(0.6 + min(0.25, lexical_ratio), 3), "reason": "Có thực thể trong ngữ cảnh giải thích liên quan."}
         return {"support": "partial", "score": round(0.25 + min(0.25, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng không có mô tả định nghĩa."}
 
@@ -314,7 +320,21 @@ def evidence_support(query: str, chunk: dict) -> dict:
         return {"support": "partial", "score": round(min(0.45, lexical_ratio), 3), "reason": "Có thuật ngữ nhưng thiếu dữ kiện tính toán."}
 
     known_entity_hit = any(entity in text for entity in known_entities)
-    if lexical_ratio >= 0.60 or (known_entity_hit and lexical_ratio >= 0.25):
+    # For an unknown topic, lexical overlap alone is not evidence: ASR noise
+    # and generic words such as "kết quả" can otherwise make an unrelated
+    # question look grounded. A new term must have an explanatory relation,
+    # or be a short exact lookup with very high overlap.
+    unknown_topic_hit = (
+        not known_entities
+        and signals["intent"] != "lookup"
+        and lexical_ratio >= 0.60
+        and (contextual_hit or len(q_terms) <= 2)
+    )
+    if (
+        (known_entities and lexical_ratio >= 0.60)
+        or (known_entity_hit and lexical_ratio >= 0.25)
+        or unknown_topic_hit
+    ):
         return {"support": "direct", "score": round(0.45 + min(0.5, lexical_ratio), 3), "reason": "Các thuật ngữ chính của câu hỏi cùng xuất hiện trong evidence."}
     return {"support": "partial", "score": round(lexical_ratio, 3), "reason": "Chỉ khớp một phần thuật ngữ."}
 

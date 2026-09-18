@@ -120,6 +120,25 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertIn("KHÔNG được gắn citation slide/video", prompt)
         self.assertIn("### Theo bài giảng", prompt)
 
+    def test_generic_identity_question_does_not_match_ai_heading(self):
+        chunk_item = chunk(
+            "heading",
+            "Nội dung bài học: User stories cho AI products và Risk register.",
+            source_type="pdf",
+        )
+        self.assertNotEqual(evidence_support("Tôi là ai?", chunk_item)["support"], "direct")
+
+    def test_unrelated_sports_prediction_does_not_match_generic_result_words(self):
+        chunk_item = chunk(
+            "workflow-result",
+            "Kết quả này trả lời đủ hai câu hỏi đã nộp và đã chấm chưa.",
+            source_type="video",
+        )
+        self.assertNotEqual(
+            evidence_support("Dự đoán kết quả bóng đá cho tôi", chunk_item)["support"],
+            "direct",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
