@@ -129,49 +129,62 @@ st.markdown("""
     }
 
     .vlearn-nav {
+        box-sizing: border-box;
         display: flex;
         align-items: center;
-        gap: 2.1rem;
+        gap: clamp(0.9rem, 2vw, 2rem);
+        width: calc(100% + 2rem);
         min-height: 4.4rem;
         margin: -1.2rem -1rem 1.8rem;
         padding: 0 1.25rem;
         border-bottom: 1px solid #34373b;
         background: #151515;
         color: #f7f7f7;
+        overflow-x: auto;
+        scrollbar-width: none;
     }
+
+    .vlearn-nav::-webkit-scrollbar { display: none; }
 
     .vlearn-brand {
         display: flex;
         align-items: center;
-        gap: 0.55rem;
-        min-width: 14rem;
-        font-size: 1.7rem;
+        flex: 0 0 auto;
+        gap: 0.45rem;
+        margin-right: clamp(0.2rem, 1.2vw, 1rem);
+        font-size: clamp(1.25rem, 1.8vw, 1.7rem);
         font-weight: 800;
         letter-spacing: 0.01em;
+        white-space: nowrap;
     }
 
     .vlearn-brand-mark {
+        display: inline-grid;
+        width: 2rem;
+        height: 2rem;
+        place-items: center;
         color: #ffffff;
-        font-size: 2.3rem;
+        font-size: 1.35rem;
         line-height: 1;
     }
 
     .vlearn-nav-link {
         display: flex;
         align-items: center;
-        gap: 0.55rem;
+        flex: 0 0 auto;
+        gap: 0.4rem;
         height: 4.4rem;
         padding: 0 0.15rem;
         border-bottom: 3px solid transparent;
         color: #f5f5f5;
-        font-size: 1.1rem;
+        font-size: clamp(0.88rem, 1.35vw, 1.08rem);
         font-weight: 700;
         white-space: nowrap;
     }
 
     .vlearn-nav-link.muted { color: #d7d7d7; }
     .vlearn-nav-link.active { border-bottom-color: #df252d; color: #ffffff; }
-    .vlearn-nav-icon { color: #b9dcff; font-size: 1.45rem; }
+    .vlearn-nav-icon { color: #b9dcff; font-size: 1.05rem; }
     .vlearn-nav-badge {
         padding: 0.15rem 0.45rem;
         border-radius: 999px;
@@ -181,7 +194,14 @@ st.markdown("""
         font-weight: 800;
     }
 
-    .vlearn-nav-spacer { flex: 1; }
+    .vlearn-nav-spacer { flex: 1 1 auto; min-width: 0.5rem; }
+    .vlearn-nav-tools {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0.8rem;
+        white-space: nowrap;
+    }
     .vlearn-locale { color: #ef2732; font-weight: 800; }
     .vlearn-locale.dim { color: #b6b6b6; }
     .vlearn-avatar {
@@ -241,6 +261,16 @@ st.markdown("""
         .block-container {
             padding: 1.5rem 1rem !important;
         }
+
+        .vlearn-nav {
+            margin-left: -1rem;
+            margin-right: -1rem;
+        }
+
+        .vlearn-nav-link { height: 3.7rem; }
+        .vlearn-brand { margin-right: 0; }
+        .vlearn-brand-mark { width: 1.6rem; height: 1.6rem; }
+        .vlearn-nav-tools { gap: 0.45rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -323,12 +353,12 @@ source_name = " + ".join(
 st.markdown("""
 <nav class="vlearn-nav" aria-label="VLearn navigation">
     <div class="vlearn-brand"><span class="vlearn-brand-mark">◆</span><span>VLEARN</span></div>
-    <div class="vlearn-nav-link muted"><span class="vlearn-nav-icon">⌂</span><span>Trang chủ</span></div>
-    <div class="vlearn-nav-link muted"><span class="vlearn-nav-icon">▣</span><span>Khóa học</span></div>
-    <div class="vlearn-nav-link active"><span class="vlearn-nav-icon">▤</span><span>Notebook</span><span class="vlearn-nav-badge">Mới</span></div>
-    <div class="vlearn-nav-link muted"><span class="vlearn-nav-icon">⚗</span><span>Lab</span></div>
+    <div class="vlearn-nav-link muted"><span>Trang chủ</span></div>
+    <div class="vlearn-nav-link muted"><span>Khóa học</span></div>
+    <div class="vlearn-nav-link active"><span>Notebook</span><span class="vlearn-nav-badge">Mới</span></div>
+    <div class="vlearn-nav-link muted"><span>Lab</span></div>
     <div class="vlearn-nav-spacer"></div>
-    <span class="vlearn-locale dim">EN</span><span class="vlearn-locale">VI</span><span>☼</span><span>♧</span><span class="vlearn-avatar">T</span>
+    <div class="vlearn-nav-tools"><span class="vlearn-locale dim">EN</span><span class="vlearn-locale">VI</span><span>☼</span><span>♧</span><span class="vlearn-avatar">T</span></div>
 </nav>
 """, unsafe_allow_html=True)
 
