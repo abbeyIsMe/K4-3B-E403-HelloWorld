@@ -364,6 +364,9 @@ with col_studio:
             st.markdown("⚠️ **Cần làm rõ thêm ngữ cảnh:**")
         else:
             st.markdown("🚫 **Không tìm thấy trong bài giảng:**")
+
+        if res.get("answer_mode") == "GROUNDED_WITH_CONTEXT":
+            st.caption("Có phần kiến thức bổ sung được tách riêng, không thuộc slide/video.")
             
         with st.container(border=True):
             st.markdown(format_answer_for_display(

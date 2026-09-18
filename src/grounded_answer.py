@@ -39,6 +39,9 @@ def _evidence_fallback(chunks: list[dict]) -> dict:
     """Answer from retrieved text when the model refuses a contextual answer."""
     summaries = []
     citations = []
+    has_contextual_evidence = any(
+        chunk.get("evidence_support") == "contextual" for chunk in chunks
+    )
     for chunk in chunks[:3]:
         lead_text = " ".join(chunk["text"].split())
         if len(lead_text) > 280:
@@ -46,15 +49,47 @@ def _evidence_fallback(chunks: list[dict]) -> dict:
         summaries.append(f"- {lead_text} [cite:{chunk['chunk_id']}]")
         citations.append(_citation_from_chunk(chunk))
 
-    return {
-        "outcome": "ANSWER",
-        "answer": (
+    if has_contextual_evidence:
+        answer = (
             "Bài giảng chưa đưa ra định nghĩa đầy đủ cho thuật ngữ này, "
             "nhưng có đề cập trong ngữ cảnh sau:\n" + "\n".join(summaries)
-        ),
+        )
+        answer_mode = "GROUNDED_WITH_CONTEXT"
+    else:
+        answer = "### Theo bài giảng\n" + "\n".join(summaries)
+        answer_mode = "GROUNDED"
+
+    return {
+        "outcome": "ANSWER",
+        "answer_mode": answer_mode,
+        "answer": answer,
         "citations": citations,
         "evidence_chunks": chunks,
     }
+
+
+def _build_prompt(query: str, context_text: str) -> str:
+    """Build the two-lane prompt: lecture evidence first, optional context second."""
+    citation_instruction = "Ở cuối mỗi ý chính thuộc phần bài giảng, BẮT BUỘC trích dẫn đúng chunk ID theo định dạng `[cite:CHUNK_ID]`. Chỉ dùng ID có trong evidence và không tự bịa ID."
+    return f"""Bạn là trợ lý học tập VLearn trung thực và chính xác.
+
+Mục tiêu: trả lời hữu ích nhưng phân biệt tuyệt đối nội dung bài giảng với kiến thức phổ thông bổ sung.
+
+QUY TẮC BẮT BUỘC:
+1. {citation_instruction}
+2. Phần `Theo bài giảng` CHỈ được dùng thông tin trong các đoạn Evidence dưới đây.
+3. Nếu câu hỏi hỏi định nghĩa một thuật ngữ và Evidence chỉ có ngữ cảnh, được phép bổ sung định nghĩa phổ thông ngắn gọn từ kiến thức nền của model.
+4. Mọi kiến thức ngoài Evidence phải nằm riêng dưới tiêu đề `### Kiến thức bổ sung (không thuộc slide/video)` và KHÔNG được gắn citation slide/video.
+5. Không được nói hoặc ngụ ý rằng kiến thức bổ sung là nội dung giảng viên đã dạy.
+6. Nếu Evidence không liên quan hoặc hoàn toàn không đủ, chỉ trả lời rằng chưa tìm thấy trong nguồn bài giảng; không dùng kiến thức bổ sung để cứu một câu hỏi ngoài phạm vi.
+7. Trình bày súc tích bằng tiếng Việt. Nếu có cả hai lớp, dùng hai tiêu đề `### Theo bài giảng` và `### Kiến thức bổ sung (không thuộc slide/video)`.
+
+CÁC ĐOẠN DẪN CHỨNG:
+{context_text}
+
+CÂU HỎI CỦA HỌC VIÊN:
+{query}
+"""
 
 
 def generate_grounded_answer(query: str, retrieval_result: dict, api_key: str = None, model_name: str = None):
@@ -107,24 +142,7 @@ def generate_grounded_answer(query: str, retrieval_result: dict, api_key: str = 
         from google import genai
         client = genai.Client(api_key=key.strip())
         
-        citation_instruction = "Ở cuối mỗi ý chính, BẮT BUỘC trích dẫn đúng chunk ID theo định dạng `[cite:CHUNK_ID]`. Chỉ dùng ID có trong evidence và không tự bịa ID."
-
-        prompt = f"""Bạn là trợ lý học tập VLearn trung thực và chính xác. 
-Nhiệm vụ của bạn là trả lời câu hỏi của học viên CHỈ DỰA TRÊN các đoạn dẫn chứng (Evidence) dưới đây.
-
-QUY TẮC BẮT BUỘC:
-1. {citation_instruction}
-2. Chỉ sử dụng thông tin có trong các đoạn dẫn chứng. Tuyệt đối KHÔNG sử dụng kiến thức bên ngoài và KHÔNG được suy diễn/bịa đặt.
-3. Chỉ trích dẫn các đoạn dẫn chứng THỰC SỰ trả lời cho câu hỏi. KHÔNG trích dẫn các đoạn chỉ vô tình xuất hiện từ khóa nhưng nói về vấn đề khác. Không cần cố dùng cả slide và video.
-4. Nếu đoạn dẫn chứng không có định nghĩa đầy đủ nhưng có ngữ cảnh giải thích liên quan, hãy nói rõ đây là cách bài giảng đề cập đến thuật ngữ và chỉ trả lời phần có trong ngữ cảnh. Chỉ trả lời "Chưa tìm thấy thông tin này trong các nguồn bài giảng đã chọn." khi evidence hoàn toàn không đủ.
-5. Trình bày rõ ràng, súc tích bằng tiếng Việt.
-
-CÁC ĐOẠN DẪN CHỨNG:
-{context_text}
-
-CÂU HỎI CỦA HỌC VIÊN:
-{query}
-"""
+        prompt = _build_prompt(query, context_text)
         for m in models_to_try:
             try:
                 chat = client.chats.create(model=m)
@@ -170,6 +188,7 @@ CÂU HỎI CỦA HỌC VIÊN:
 
                 return {
                     "outcome": "ANSWER",
+                    "answer_mode": "GROUNDED_WITH_CONTEXT" if "kiến thức bổ sung" in raw_answer.lower() else "GROUNDED",
                     "answer": raw_answer,
                     "citations": used_citations,
                     "evidence_chunks": chunks

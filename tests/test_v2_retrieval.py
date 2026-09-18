@@ -1,7 +1,7 @@
 import unittest
 
 from src.retrieval import evidence_support, is_query_ambiguous, normalize_query, select_evidence
-from src.grounded_answer import _evidence_fallback, generate_grounded_answer
+from src.grounded_answer import _build_prompt, _evidence_fallback, generate_grounded_answer
 from src.query_context import resolve_query
 
 
@@ -107,11 +107,18 @@ class EvidenceGateTests(unittest.TestCase):
             "Privacy cần xác định có PII hoặc dữ liệu nhạy cảm không và áp dụng masking.",
             source_type="pdf",
         )
+        pii["evidence_support"] = "contextual"
         result = _evidence_fallback([pii])
         self.assertEqual(result["outcome"], "ANSWER")
         self.assertIn("chưa đưa ra định nghĩa đầy đủ", result["answer"])
         self.assertIn("[cite:pii-context]", result["answer"])
         self.assertEqual(result["citations"][0]["chunk_id"], "pii-context")
+
+    def test_prompt_separates_lecture_and_supplemental_knowledge(self):
+        prompt = _build_prompt("PII là gì?", "PII xuất hiện trong ngữ cảnh Privacy. [id:pii]")
+        self.assertIn("### Kiến thức bổ sung (không thuộc slide/video)", prompt)
+        self.assertIn("KHÔNG được gắn citation slide/video", prompt)
+        self.assertIn("### Theo bài giảng", prompt)
 
 
 if __name__ == "__main__":
