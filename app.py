@@ -195,6 +195,27 @@ st.markdown("""
         font-weight: 800;
     }
 
+    .source-row {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        margin: 0.4rem 0;
+        padding: 0.7rem 0.65rem;
+        border-radius: 7px;
+        font-size: 0.88rem;
+    }
+
+    .source-row small {
+        display: block;
+        margin-top: 0.2rem;
+        color: #9aa4ad;
+        font-size: 0.75rem;
+    }
+
+    .source-active { background: rgba(68, 160, 218, 0.14); border-left: 3px solid #54b8ed; }
+    .source-muted { opacity: 0.55; }
+    .source-icon { font-size: 1.2rem; }
+
     div[data-testid="stForm"] {
         border: 1px solid rgba(128, 128, 128, 0.25) !important;
         border-radius: 8px !important;
@@ -334,10 +355,40 @@ with header_clear:
             st.session_state[key] = value
         st.rerun()
 
-# Main layout gives the answer more room than the inspector.
-col_studio, col_inspector = st.columns([1.2, 0.8], gap="large")
+# NotebookLM-style workspace: sources, chat, and source inspector.
+col_sources, col_studio, col_inspector = st.columns([0.23, 0.49, 0.28], gap="medium")
 
-# --- LEFT COLUMN: NOTEBOOK STUDIO (Chat & Citations) ---
+# --- LEFT COLUMN: SOURCES ---
+with col_sources:
+    st.markdown("### Sources")
+    st.caption("Nguồn được dùng cho notebook này")
+
+    with st.container(border=True):
+        st.markdown("**📚 VLearn · 5 bài học**")
+        st.caption(scope_name)
+        st.divider()
+
+        source_rows = [
+            ("📄", "Slide bài giảng", "5 PDFs", "pdf"),
+            ("🎥", "Video bài giảng", "16 videos", "video"),
+        ]
+        for icon, label, count, source_type in source_rows:
+            active = source_type in allowed_sources
+            state = "Đang dùng" if active else "Đã tắt"
+            state_class = "source-active" if active else "source-muted"
+            st.markdown(
+                f"<div class='source-row {state_class}'>"
+                f"<span class='source-icon'>{icon}</span>"
+                f"<span><strong>{label}</strong><small>{count} · {state}</small></span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.divider()
+        st.caption("Đổi bài học hoặc bật/tắt nguồn trong Notebook settings.")
+        st.metric("Evidence", "672 chunks")
+
+# --- CENTER COLUMN: NOTEBOOK CHAT ---
 with col_studio:
     # Quick Suggested Questions with native responsive pills
     sample_queries = {
