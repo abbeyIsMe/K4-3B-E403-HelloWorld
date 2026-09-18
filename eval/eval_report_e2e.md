@@ -57,4 +57,4 @@ The cached result for V2-13 was generated before its expected outcome was correc
 
 This is the CP3 real-AI measurement artifact: Gemini generated the answers, and every answer citation points to an allowed retrieved evidence chunk. The report demonstrates the outcome and citation contract; full claim-by-claim factuality still requires human inspection of each answer against its cited chunk, so the report does not claim that an automated string check proves factuality.
 
-The remaining CP3 submission artifact is the roughly 30-second screen recording showing one real Gemini answer and a citation opened in the PDF/video inspector.
+The CP3 screen-recording artifact is `demo/Demo_HelloWorld.mp4` (52.8 seconds), showing a real Gemini answer and the citation/Inspector flow.

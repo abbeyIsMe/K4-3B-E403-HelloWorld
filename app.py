@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import re
 from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
@@ -159,6 +160,21 @@ with st.sidebar:
         
     st.caption("375 trang slide · 16 video · 672 evidence chunks")
 
+# Do not leave an answer from a previous source scope on screen after the
+# user changes the lesson or source filters.
+scope_signature = (selected_lesson_key, tuple(allowed_sources))
+previous_scope = st.session_state.get("scope_signature")
+if previous_scope is not None and previous_scope != scope_signature:
+    st.session_state.last_result = None
+    st.session_state.active_pdf = None
+    st.session_state.active_video = None
+st.session_state.scope_signature = scope_signature
+
+scope_name = lesson_options[selected_lesson_key]
+source_name = " + ".join(
+    {"pdf": "slide", "video": "video"}[source] for source in allowed_sources
+)
+
 # Top Header
 st.title("📓 VLearn NotebookLM")
 st.caption("Tra cứu bài giảng bằng dẫn chứng trực tiếp từ slide và video")
@@ -173,7 +189,7 @@ with col_studio:
         "💎 Double Diamond": "Quy trình Double Diamond áp dụng cho AI như thế nào?",
         "🔄 ReAct Pattern": "Mô hình ReAct pattern hoạt động ra sao?",
         "🔤 Tokenizer & Token": "Tokenizer là gì và làm nhiệm vụ gì với văn bản?",
-        "📋 PoC Canvas": "PoC Canvas dùng để làm gì trong AI Product?"
+        "🧩 JSON Schema Tool": "JSON Schema của Tool là gì?"
     }
 
     st.caption("💡 Gợi ý câu hỏi nghiên cứu:")
@@ -213,7 +229,7 @@ with col_studio:
         if not allowed_sources:
             st.warning("Vui lòng chọn ít nhất một nguồn ở thanh cài đặt bên trái!")
         else:
-            with st.spinner("Đang tra cứu xuyên suốt 5 bài học và trích xuất dẫn chứng..."):
+            with st.spinner(f"Đang tra cứu {scope_name} · nguồn: {source_name}..."):
                 ret_res = retrieve_evidence(
                     query=active_query.strip(),
                     lesson_id=selected_lesson_key,
@@ -277,7 +293,22 @@ with col_studio:
             st.markdown("🚫 **Không tìm thấy trong bài giảng:**")
             
         with st.container(border=True):
-            st.markdown(res["answer"])
+            citation_numbers = {
+                citation["chunk_id"]: index
+                for index, citation in enumerate(res.get("citations", []), start=1)
+            }
+
+            def replace_citation(match):
+                number = citation_numbers.get(match.group(1))
+                return f"[{number}]" if number else "[nguồn]"
+
+            answer_text = re.sub(
+                r"\[cite:([^\]]+)\]",
+                replace_citation,
+                res["answer"],
+                flags=re.IGNORECASE,
+            )
+            st.markdown(answer_text)
 
         citations = res.get("citations", [])
         evidence_chunks = res.get("evidence_chunks", [])
