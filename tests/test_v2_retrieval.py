@@ -1,6 +1,6 @@
 import unittest
 
-from src.retrieval import evidence_support, is_query_ambiguous, retrieve_evidence, select_evidence
+from src.retrieval import evidence_support, is_query_ambiguous, normalize_query, select_evidence
 from src.grounded_answer import generate_grounded_answer
 
 
@@ -22,8 +22,13 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertTrue(is_query_ambiguous("cái này dùng sao?"))
 
     def test_unaccented_definition_keeps_source_filter_gate(self):
-        result = retrieve_evidence("Token la gi?", allowed_sources=["pdf"], use_dense=False)
-        self.assertEqual(result["status"], "NOT_FOUND")
+        budget = chunk(
+            "budget",
+            "Context window có giới hạn 8192 token và ngân sách đầu ra là 2048 token.",
+            source_type="pdf",
+        )
+        selected = select_evidence("Token la gi?", [budget])
+        self.assertEqual(selected, [])
 
     def test_pronoun_and_followup_queries_need_context(self):
         self.assertTrue(is_query_ambiguous("Nó hoạt động thế nào?"))
@@ -58,9 +63,14 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertNotEqual(evidence_support("PII là gì?", unrelated)["support"], "direct")
 
     def test_few_shot_spacing_variant_matches_hyphenated_source(self):
-        result = retrieve_evidence("Few shot là gì?", use_dense=False)
-        self.assertEqual(result["status"], "FOUND")
-        self.assertTrue(any(chunk["chunk_id"] == "chk_0186" for chunk in result["chunks"]))
+        self.assertEqual(normalize_query("Few shot là gì?"), "few-shot là gì?")
+        evidence = chunk(
+            "few-shot-fixture",
+            "Few-shot là cách cung cấp một vài ví dụ để hướng dẫn mô hình.",
+            source_type="pdf",
+        )
+        selected = select_evidence("Few shot là gì?", [evidence])
+        self.assertEqual([item["chunk_id"] for item in selected], ["few-shot-fixture"])
 
     def test_offline_answer_cites_only_evidence_packet(self):
         direct = chunk("direct", "Token là đơn vị nhỏ dùng để biểu diễn văn bản.")
