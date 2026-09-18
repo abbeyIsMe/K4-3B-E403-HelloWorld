@@ -13,3 +13,6 @@ __pycache__/
 
 # Local agent skills and design instructions.
 /.agents/
+
+# macOS filesystem metadata.
+.DS_Store

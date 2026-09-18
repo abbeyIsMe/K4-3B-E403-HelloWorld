@@ -92,6 +92,7 @@ Mở trình duyệt tại: **`http://localhost:8501`**.
 
 ```text
 ├── app.py                      # Source chính của giao diện Streamlit
+├── demo-slides.pdf             # Slide pitch 6 trang
 ├── codebase/
 │   ├── app.py                  # Entry point theo cấu trúc repo nộp bài
 │   └── README.md               # Cách chạy prototype từ codebase/
@@ -109,16 +110,23 @@ Mở trình duyệt tại: **`http://localhost:8501`**.
 │   ├── golden_set_day01.json   # Golden set truy hồi
 │   ├── golden_set_v2.json      # Golden set evidence v2
 │   └── eval_report.md          # Báo cáo đánh giá chi tiết
+├── validation/
+│   ├── nguyen-huy-hung-02990.md # Nhật ký pilot
+│   └── nguyen-van-tai-03004.md  # Nhật ký pilot
 ├── reflection/
-│   └── tran-tuan-tu-02840.md   # Reflection cá nhân
+│   ├── tran-tuan-tu-02840.md   # Reflection cá nhân
+│   ├── dao-duy-hieu-02651.md   # Reflection cá nhân
+│   ├── ho-hoang-phuong-anh-02460.md # Reflection cá nhân
+│   └── vu-ba-anh-02893.md      # Reflection cá nhân
 ├── requirements.txt            # Danh mục thư viện ứng dụng
 ├── .env.example                # File mẫu cấu hình môi trường
 └── .gitignore                  # Loại trừ dữ liệu nặng và API keys nhạy cảm
 ```
 
-`validation/` chưa được tạo vì nhóm chưa thu thập được nhật ký dùng thử từ
-người ngoài một cách hợp lệ. Nhóm chấp nhận không lấy điểm bonus R6 thay vì tạo
-dữ liệu giả. `demo-slides.pdf` do các thành viên khác phụ trách.
+`validation/` hiện có hai nhật ký pilot từ người ngoài nhóm. Nhóm chưa claim
+điểm bonus R6 theo ngưỡng validation đầy đủ của hackathon, và không tạo thêm dữ
+liệu giả. `demo-slides.pdf` là bản slide pitch 6 trang; video demo dự phòng nằm
+ở `demo/Demo_HelloWorld.mp4`.
 
 ---
 
