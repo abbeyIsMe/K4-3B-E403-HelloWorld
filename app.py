@@ -137,7 +137,7 @@ st.markdown("""
 
     .block-container {
         padding-top: 2.5rem !important;
-        padding-bottom: 2rem !important;
+        padding-bottom: 6.5rem !important;
         max-width: 1500px !important;
     }
 
@@ -291,6 +291,21 @@ st.markdown("""
         overflow-wrap: anywhere;
     }
 
+    div[data-testid="stChatInput"] {
+        position: fixed !important;
+        left: 50%;
+        bottom: 1rem;
+        z-index: 1000;
+        width: min(47vw, 720px);
+        transform: translateX(-50%);
+        padding: 0.35rem;
+        border: 1px solid var(--vlearn-line);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--vlearn-surface) 94%, transparent);
+        box-shadow: 0 8px 28px rgba(15, 23, 42, 0.16);
+        backdrop-filter: blur(12px);
+    }
+
     div[data-testid="stChatInput"] textarea { min-height: 3rem; }
 
     [data-testid="stSidebar"] h2,
@@ -300,7 +315,7 @@ st.markdown("""
 
     @media (max-width: 900px) {
         .block-container {
-            padding: 1.5rem 1rem !important;
+            padding: 1.5rem 1rem 6.5rem !important;
         }
 
         .vlearn-nav {
@@ -313,6 +328,11 @@ st.markdown("""
         .vlearn-brand-mark { width: 1.6rem; height: 1.6rem; }
         .vlearn-nav-tools { gap: 0.45rem; }
         .vlearn-nav-link { font-size: 0.95rem; }
+        div[data-testid="stChatInput"] {
+            left: 1rem;
+            width: calc(100% - 2rem);
+            transform: none;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
